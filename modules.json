@@ -1,0 +1,7 @@
+{
+	"test": "./modules/test.js",
+	"acro": "./games/acro.js",
+	"slots": "./games/slots.js",
+	"tree": "./games/loottree.js",
+	"raffle": "./modules/raffle.js"
+}
