@@ -43,8 +43,16 @@ var spongeBot = {};
 //-----------------------------------------------------------------------------
 //  MODULES
 //-----------------------------------------------------------------------------
+
+const modList = require('./modules.json');
+const mods = {
+	nq: require(modList.enqueue)
+};
+
 const cons = require('./lib/constants.js');
 const timey = require('./lib/timey.js');
+
+var nq = mods.nq;
 var utils = require('./lib/utils.js');
 //var iFic = require('./games/ific.js');
 var acro = require('./games/acro.js');
@@ -155,25 +163,9 @@ spongeBot.quote = {
 	}
 };
 
-var Command = function(trigger, config) {
-	let moduleName = config.moduleName || trigger;
-	let defaults = {
-		disabled: false,
-		help: modules[moduleName].commands[trigger].help,
-		longHelp: modules[moduleName].commands[trigger].longHelp,
-		do: function(message, parms) {
-			modules[moduleName].commands[trigger].do(message, parms);
-		},
-		accessRestrictions: false
-	};
-	let theCommand = defaults;
-		
-	for (var prop in config) {
-		theCommand[prop] = config.prop;
-	}
-};
 
-var StoryCommand = function(name) {
+const Command = utils.Command;
+const StoryCommand = function(name) {
 	this.disabled = true,
 	this.do = function(message, parms) {
 		iFic[name].do(message, parms);
@@ -186,6 +178,16 @@ for (let i = 0; i < zCommands.length; i++) {
 	spongeBot[zCommands[i]] = new StoryCommand(zCommands[i]);
 }
 
+spongeBot.q = {
+	help: nq.commands.q.help,
+	longHelp: nq.commands.q.longHelp,
+	disabled: false,
+	accessRestrictions: false,
+	cmdGroup: nq.commands.q.cmdGroup,
+	do: function(message, parms) {
+		nq.commands.q.do(message, parms, gameStats);
+	}
+};
 //-----------------------------------------------------------------------------
 spongeBot.collect = {
 	help: 'Collects from your weekly loot bag! What will you find?',

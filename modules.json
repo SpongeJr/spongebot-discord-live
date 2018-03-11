@@ -3,5 +3,6 @@
 	"acro": "./games/acro.js",
 	"slots": "./games/slots.js",
 	"tree": "./games/loottree.js",
-	"raffle": "./modules/raffle.js"
+	"raffle": "./modules/raffle.js",
+	"enqueue": "./modules/enqueue.js"
 }
