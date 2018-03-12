@@ -171,19 +171,21 @@ module.exports = {
 					var role;
 					var roleBonusStr = '';
 					var totalRoleBonus = 0;
-					for (var roleName in specialRoles) {
-						role = message.guild.roles.find('name', roleName);
-						if (message.member.roles.has(role.id)) {
-							roleBonusStr += roleName + '(' + specialRoles[roleName] + '), ';
-							totalRoleBonus += specialRoles[roleName];
+					if (message.guild === cons.SERVER_ID) {
+						for (var roleName in specialRoles) {
+							role = message.guild.roles.find('name', roleName);
+							if (message.member.roles.has(role.id)) {
+								roleBonusStr += roleName + '(' + specialRoles[roleName] + '), ';
+								totalRoleBonus += specialRoles[roleName];
+							}
 						}
-					}
-					
-					if (totalRoleBonus !== 0) {
-						roleBonusStr = roleBonusStr.slice(0, roleBonusStr.length - 2); // remove last comma
-						roleBonusStr = 'Included these bonuses for having special roles: ' + roleBonusStr;
-						roleBonusStr += '\n   Total role bonus: ' + totalRoleBonus + '! ';
-						collectVal += totalRoleBonus;
+						
+						if (totalRoleBonus !== 0) {
+							roleBonusStr = roleBonusStr.slice(0, roleBonusStr.length - 2); // remove last comma
+							roleBonusStr = 'Included these bonuses for having special roles on The Planet: ' + roleBonusStr;
+							roleBonusStr += '\n   Total role bonus: ' + totalRoleBonus + '! ';
+							collectVal += totalRoleBonus;
+						}
 					}
 					
 					if (fruitBonus > 0) {
