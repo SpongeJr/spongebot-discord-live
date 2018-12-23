@@ -382,13 +382,13 @@ spongeBot.restrict = {
 			return;
 		}
 		
-		if (spongeBot[parms].hasOwnProperty('access')) {
-			spongeBot[parms].access = !spongeBot[parms].access;
+		if (spongeBot[parms].hasOwnProperty('accessRestrictions')) {
+			spongeBot[parms].accessRestrictions = !spongeBot[parms].accessRestrictions;
 		} else {
-			spongeBot[parms].access = false;
+			spongeBot[parms].accessRestrictions = false;
 		}
 		utils.chSend(message, '`!' + parms + '` is restricted access:  ' +
-		  spongeBot[parms].access);
+		  spongeBot[parms].accessRestrictions);
 	},
 	help: ':warning: Toggles whether commands require special access.'
 	
@@ -997,7 +997,7 @@ spongeBot.timer = {
 			utils.chSend(message, 'Usage: `!timer <sec>` sets a timer to go off in _<sec>_ seconds.');
 		} else {
 			parms = parseInt(parms);
-			if ((parms >= 1) && (parms <= 255)) {
+			if ((parms >= 1) && (parms <= 999)) {
 				setTimeout(function() {
 					utils.chSend(message, 'Ding ding! Time is up!');
 				}, (parms * 1000));
@@ -1257,7 +1257,7 @@ BOT.on('message', message => {
 			debugPrint('  ' + utils.makeTag(message.author.id) + ': !' + theCmd + ' (' + parms + ') : ' + message.channel);
 			
 			if (!spongeBot[theCmd].disabled) {
-				if (spongeBot[theCmd].access) {
+				if (spongeBot[theCmd].accessRestrictions) {
 					// requires special access
 					if (!hasAccess(message.author.id, spongeBot[theCmd].access)) {
 						utils.chSend(message, 'Your shtyle is too weak ' +
