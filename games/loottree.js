@@ -310,6 +310,7 @@ module.exports = {
 					}
 				} else {
 					pickMess = 'Nothing to pick... you need to do `!tree fruit` first.';
+					return;
 				}
 				pickMess += '\n **TOTAL LOOT FRUIT VALUE**: ' + totalFruitVal + ' (added to your bank)';
 				utils.addBank(who, totalFruitVal, bankroll);
