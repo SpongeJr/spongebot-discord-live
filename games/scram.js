@@ -6,14 +6,29 @@ var scramWordLists = {
 	"402126095056633859": cons.PLANET_SCRAMWORDS
 };
 
+/*
 var scramConfig = {
 	wordDelay: 105000,
 	wordDelayVariation: 15000,
 	baseAward: 600,
 	letterBounus: 100, 
 	guessTime: 29000,
-	extraGuessTime: 2500
+	extraGuessTime: 2500,
+	maxMultiplier: 2,
+	minMultiplier: 1
 };
+*/
+var scramConfig = {
+	wordDelay: 1000,
+	wordDelayVariation: 0,
+	baseAward: 0,
+	letterBounus: 0, 
+	guessTime: 29000,
+	extraGuessTime: 2500,
+	maxMultiplier: 2,
+	minMultiplier: 1
+};
+
 //-----------------------------------------------------------------------------
 var scrambler = function(inputWord) {
 	var wordArray = inputWord.split("");
@@ -28,10 +43,13 @@ var scrambler = function(inputWord) {
 };
 //-----------------------------------------------------------------------------
 module.exports = {
+	subCmd: {},
 	s: {
 		do: function(message, parms, gameStats, bankroll) {
 			var server = message.guild;
-			
+			var theWord = scram[server.id].word;
+			var minMultiplier = scramConfig.minMultiplier;
+			var maxMultiplier = scramConfig.maxMultiplier;
 			if (!server) {
 				utils.auSend(message, 'The word scramble game is meant to be played in public, and '+
 				'not direct messages. Sorry! It\'s more fun with others, anyway!');
@@ -58,24 +76,52 @@ module.exports = {
 				return;
 			}
 			
-			if (parms === scram[server.id].word) {
+			if (parms === theWord) {
+				
+				clearTimeout(scram[server.id].guessTimer);
+				
 				var who = message.author.id;
 				scram[server.id].runState = 'gameover';
-				utils.addBank(message.author.id, parseInt(scramConfig.baseAward + scramConfig.letterBounus * scram[server.id].word.length), bankroll);
-				var outStr = message.author + ' just unscrambled the word in ';
+				var outStr = `:tada: ${message.author} just unscrambled the word in `;
 				var now = new Date();
 				var speed = now - scram[server.id].guessStartTime;
 				var fastest = utils.getStat(who, 'scram', 'fastest', gameStats) || 0;
 				outStr += (speed / 1000).toFixed(1) + ' seconds and wins ';
-				outStr += parseInt(scramConfig.baseAward + scramConfig.letterBounus * scram[server.id].word.length ) + ' credits!';
+				var guessTime = scramConfig.guessTime + scramConfig.extraGuessTime * theWord.length; // max allowed time
+				var multiplier = 1 - speed / guessTime;
+				multiplier = (multiplier * (scramConfig.maxMultiplier - scramConfig.minMultiplier) + minMultiplier);
+				var baseAward = scramConfig.baseAward + scramConfig.letterBounus * theWord.length;
+				var award = parseInt(baseAward * multiplier);
+
+				outStr +=  `${award} credits! ( ${baseAward} x ~${multiplier.toFixed(2)} speed multiplier )`;
+				outStr += '\n The word was: ' + theWord;
+				utils.addBank(message.author.id, award, bankroll);
+				
 				if (fastest <= 0 || speed < fastest) {
 					outStr += '\n :zap: That\'s a new fastest time for them! :zap:';
 					utils.setStat(who, 'scram', 'fastest', speed, gameStats);
 				}
-				
 				utils.alterStat(message.author.id, 'scram', 'wins', 1, gameStats);
+				
+				if (gameStats[message.author.id].scram.wins % 25 === 0) {
+					outStr += `\n WOW, amazing! That makes ${gameStats[message.author.id].scram.wins} wins!`;
+				} else {
 				outStr += '\n' + message.author + ' has now unscrambled ' +
 				  gameStats[message.author.id].scram.wins + ' words!';
+				}
+				
+				var theDelay = parseInt(Math.max(1, scramConfig.wordDelay - (scramConfig.wordDelayVariation / 2) +
+				  Math.random() * scramConfig.wordDelayVariation));
+				outStr += '\n Next word available in ' + parseInt(theDelay / 1000) + ' second(s).';			
+				scram[server.id].timer = setTimeout(function() {
+					if (scram[server.id].runState !== 'ready') {
+						scram[server.id].runState = 'ready';
+						if (scram[server.id].announce) {
+							utils.chSend(message, 'There\'s a new `!scram` word ready!');
+						}
+					}	
+				}, theDelay);
+				
 				utils.chSend(message,  outStr);
 			} else {
 				//utils.chSend(message, 'Not the word.');
@@ -140,29 +186,32 @@ module.exports = {
 			utils.chSend(message, 'Unscramble this: ' + utils.bigLet(scramWord) + 
 			  '   *Category*: ' + theCat);
 			  
-			var theDelay = parseInt(scramConfig.wordDelay - (scramConfig.wordDelayVariation / 2) +
-			  Math.random() * scramConfig.wordDelayVariation);
+
 			var guessTime = scramConfig.guessTime + scramConfig.extraGuessTime * theWord.length;
 			var theMess = 'You have ' + parseInt(guessTime / 1000) + 
-			  ' seconds to guess by typing `!s <guess>`. Next word available in ' + 
-			  parseInt(theDelay / 1000) + ' seconds.';
+			  ' seconds to guess by typing `!s <guess>`.';
 			utils.chSend(message, theMess);
 			scram[server.id].runState = 'guessing';
 			
-			scram[server.id].timer = setTimeout(function() {
-				if (scram[server.id].runState !== 'ready') {
-					scram[server.id].runState = 'ready';
-					if (scram[server.id].announce) {
-						utils.chSend(message, 'There\'s a new `!scram` word ready!');
-					}
-				}
-			}, theDelay);
 			scram[server.id].guessStartTime = new Date();
+			var theDelay = Math.max(1, parseInt(scramConfig.wordDelay - (scramConfig.wordDelayVariation / 2) +
+			  Math.random() * scramConfig.wordDelayVariation));
 			scram[server.id].guessTimer = setTimeout(function() {
 				if (scram[server.id].runState === 'guessing') {
 					utils.chSend(message, 'The `!scram` word was not guessed' +
-					' in time! The word was: ' + scram[server.id].word);
+					' in time! The word was: ' + scram[server.id].word) + 
+					'\n Next word available in ' + parseInt(theDelay / 1000) + ' second(s).';
+					
 					scram[server.id].runState = 'gameover';
+					scram[server.id].timer = setTimeout(function() {
+						if (scram[server.id].runState !== 'ready') {
+							scram[server.id].runState = 'ready';
+							if (scram[server.id].announce) {
+								utils.chSend(message, 'There\'s a new `!scram` word ready!');
+							}
+						}	
+					}, theDelay);
+					
 				}
 			}, guessTime);
 		} else {
