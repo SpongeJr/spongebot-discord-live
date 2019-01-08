@@ -1,8 +1,4 @@
 {
-	"test": "./modules/test.js",
-	"acro": "./games/acro.js",
-	"slots": "./games/slots.js",
-	"tree": "./games/loottree.js",
-	"raffle": "./modules/raffle.js",
-	"enqueue": "./modules/enqueue.js"
+	"enqueue": "./modules/enqueue.js",
+	"speech": "./modules/speech.js"
 }
