@@ -94,19 +94,27 @@ module.exports = {
 				// output top 10
 				let topNick = utils.idToNick(topWins[0].who, gameStats);
 				outStr += '```TOP 10 DESCRAMBLERS:\n';
-				outStr += ` !SCRAM MASTER :  -> ${topNick} <-  with ${topWins[0].wins} wins \n\n`;
+				outStr += ` !SCRAM MASTER:  ->  ${topNick}  <-  with ${topWins[0].wins} wins! \n`;
 				for (let num = 1; (num < 10 && num < topWins.length); num++) {
 					let nick = utils.idToNick(topWins[num].who, gameStats);
 					outStr += ` #${num + 1}: (${topWins[num].wins}) ... ${nick} \n`;
 				}
 				
+				// output top 10 fastest
+				let fastestNick = utils.idToNick(fastest[0].who, gameStats);
+				let speed = fastest[0].speed / 1000;
+				outStr += '---\nFASTEST DESCRAMBLERS:\n';
+				outStr += `SUPERSONIC SCRAM CHAMP:  ->  ${fastestNick}  <-  in ${speed.toFixed(3)} seconds! \n`;
+				for (let num = 1; (num < 10 && num < fastest.length); num++) {
+					let nick = utils.idToNick(fastest[num].who, gameStats);
+					speed = fastest[num].speed / 1000;
+					outStr += ` #${num + 1}: (${speed.toFixed(3)} s) ... ${nick} \n`;
+				}
+					
 				outStr += '```';
-				
+							
 				utils.chSend(message, outStr);
-				
-				// scramStats.wins
-				
-				
+		
 			}
 		}
 	},
@@ -170,7 +178,10 @@ module.exports = {
 				utils.alterStat(message.author.id, 'scram', 'wins', 1, gameStats);
 				
 				if (gameStats[message.author.id].scram.wins % 25 === 0) {
-					outStr += `\n WOW, amazing! That makes ${gameStats[message.author.id].scram.wins} wins!`;
+					//outStr += `\n WOW, amazing! That makes ${gameStats[message.author.id].scram.wins} wins!`;
+					outStr += '\n :warning: Please note: `!scram` scores will probably move to a "per-server" scoring table soon.' +
+					  ' Sorry for any inconvenience.';
+					  
 				} else {
 				outStr += '\n' + message.author + ' has now unscrambled ' +
 				  gameStats[message.author.id].scram.wins + ' words!';
