@@ -112,7 +112,9 @@ module.exports = {
 				}
 					
 				outStr += '```';
-							
+				outStr += '\n :warning: Please note: `!scram` scores will probably move to a "per-server" scoring table soon.' +
+					  ' Sorry for any inconvenience.';
+					  
 				utils.chSend(message, outStr);
 		
 			}
@@ -178,7 +180,7 @@ module.exports = {
 				utils.alterStat(message.author.id, 'scram', 'wins', 1, gameStats);
 				
 				if (gameStats[message.author.id].scram.wins % 25 === 0) {
-					//outStr += `\n WOW, amazing! That makes ${gameStats[message.author.id].scram.wins} wins!`;
+					outStr += `\n WOW, amazing! That makes ${gameStats[message.author.id].scram.wins} wins!`;
 					outStr += '\n :warning: Please note: `!scram` scores will probably move to a "per-server" scoring table soon.' +
 					  ' Sorry for any inconvenience.';
 					  
