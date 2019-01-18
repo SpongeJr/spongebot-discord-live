@@ -247,7 +247,7 @@ module.exports = {
 				var user = message.author;
 				var who = message.author.id;
 				scram[server.id].runState = 'gameover';
-				var outStr = `:tada: ${message.author} just unscrambled the word in `;
+				var outStr = `:tada: **${user.username}** just unscrambled the word in `;
 				var now = new Date();
 				var speed = now - scram[server.id].guessStartTime;
 				var fastest = utils.getStat(who, 'scram', 'fastest', gameStats) || 0;
@@ -286,7 +286,7 @@ module.exports = {
 				if (gameStats[message.author.id].scram.wins % 25 === 0) {
 					outStr += `\n WOW, amazing! That makes ${gameStats[message.author.id].scram.wins} wins!`;
 				} else {
-				outStr += '\n' + message.author + ' has now unscrambled ' +
+				outStr += '\n**' + user.username + '** has now unscrambled ' +
 				  gameStats[message.author.id].scram[server.id].wins + ' words! ' +
 				  '(' + gameStats[message.author.id].scram.wins + ' global wins)';
 				}
