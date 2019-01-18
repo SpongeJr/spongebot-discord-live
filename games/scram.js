@@ -260,7 +260,7 @@ module.exports = {
 				var multiplier = 1 - speed / guessTime;
 				multiplier = (multiplier * (scramConfigs[scram[server.id].currentConfig].maxMultiplier - scramConfigs[scram[server.id].currentConfig].minMultiplier) + minMultiplier);
 				var baseAward = scramConfigs[scram[server.id].currentConfig].baseAward + scramConfigs[scram[server.id].currentConfig].letterBounus * theWord.length;
-				var award = parseInt(baseAward * multiplier);
+				var award = Math.round(baseAward * multiplier);
 
 				outStr +=  `${award} credits! ( ${baseAward} x ~${multiplier.toFixed(2)} speed multiplier )`;
 				outStr += '\n The word was: ' + theWord;
@@ -291,9 +291,9 @@ module.exports = {
 				  '(' + gameStats[message.author.id].scram.wins + ' global wins)';
 				}
 				
-				var theDelay = parseInt(Math.max(1, scramConfigs[scram[server.id].currentConfig].wordDelay - (scramConfigs[scram[server.id].currentConfig].wordDelayVariation / 2) +
+				var theDelay = Math.floor(Math.max(1, scramConfigs[scram[server.id].currentConfig].wordDelay - (scramConfigs[scram[server.id].currentConfig].wordDelayVariation / 2) +
 				  Math.random() * scramConfigs[scram[server.id].currentConfig].wordDelayVariation));
-				outStr += '\n Next word available in ' + parseInt(theDelay / 1000) + ' second(s).';			
+				outStr += '\n Next word available in ' + Math.floor(theDelay / 1000) + ' second(s).';
 				scram[server.id].timer = setTimeout(function() {
 					if (scram[server.id].runState !== 'ready') {
 						scram[server.id].runState = 'ready';
@@ -347,7 +347,7 @@ module.exports = {
 				wordList = cons.SCRAMWORDS;
 			}
 			var keys = Object.keys(wordList);
-			var theCat = keys[parseInt(Math.random() * keys.length)];
+			var theCat = keys[Math.floor(Math.random() * keys.length)];
 			var catWords = wordList[theCat].split(',');
 			var theWord = utils.listPick(catWords)[0];
 			scram[server.id].word = theWord;
@@ -369,19 +369,19 @@ module.exports = {
 			  
 
 			var guessTime = scramConfigs[scram[server.id].currentConfig].guessTime + scramConfigs[scram[server.id].currentConfig].extraGuessTime * theWord.length;
-			var theMess = 'You have ' + parseInt(guessTime / 1000) + 
+			var theMess = 'You have ' + Math.round(guessTime / 100) / 10 + 
 			  ' seconds to guess by typing `!s <guess>`.';
 			utils.chSend(message, theMess);
 			scram[server.id].runState = 'guessing';
 			
 			scram[server.id].guessStartTime = new Date();
-			var theDelay = Math.max(1, parseInt(scramConfigs[scram[server.id].currentConfig].wordDelay - (scramConfigs[scram[server.id].currentConfig].wordDelayVariation / 2) +
+			var theDelay = Math.max(1, Math.round(scramConfigs[scram[server.id].currentConfig].wordDelay - (scramConfigs[scram[server.id].currentConfig].wordDelayVariation / 2) +
 			  Math.random() * scramConfigs[scram[server.id].currentConfig].wordDelayVariation));
 			scram[server.id].guessTimer = setTimeout(function() {
 				if (scram[server.id].runState === 'guessing') {
 					utils.chSend(message, 'The `!scram` word was not guessed' +
 					  ' in time! The word was: ' + scram[server.id].word + 
-					  '\n Next word available in ' + parseInt(theDelay / 1000) + ' second(s).');
+					  '\n Next word available in ' + Math.round(theDelay / 1000) + ' second(s).');
 					
 					scram[server.id].runState = 'gameover';
 					scram[server.id].timer = setTimeout(function() {
