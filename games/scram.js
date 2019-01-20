@@ -356,6 +356,8 @@ module.exports = {
 			// do the scramble
 			// remove all the blanks again, and splice back into places
 			var spaceArr = [];
+			var theMess = '';
+			var scramConfig = scramConfigs[scram[server.id].currentConfig];
 			for (var i = 0; i < theWord.length; i++) {
 				if (theWord.charAt(i) === ' ') {spaceArr.push(i);}
 			}
@@ -364,19 +366,17 @@ module.exports = {
 			spaceArr.forEach(function(spaceInd) {
 				scramWord = scramWord.slice(0, spaceInd) + ' ' + scramWord.slice(spaceInd);
 			});		  
-			utils.chSend(message, 'Unscramble this: ' + utils.bigLet(scramWord) + 
-			  '   *Category*: ' + theCat);
-			  
+			theMess += 'Unscramble this: ' + utils.bigLet(scramWord) + '   *Category*: ' + theCat;
 
-			var guessTime = scramConfigs[scram[server.id].currentConfig].guessTime + scramConfigs[scram[server.id].currentConfig].extraGuessTime * theWord.length;
-			var theMess = 'You have ' + Math.round(guessTime / 100) / 10 + 
+			var guessTime = scramConfig.guessTime + scramConfig.extraGuessTime * theWord.length;
+			theMess += '\nYou have ' + Math.round(guessTime / 100) / 10 + 
 			  ' seconds to guess by typing `!s <guess>`.';
 			utils.chSend(message, theMess);
 			scram[server.id].runState = 'guessing';
 			
 			scram[server.id].guessStartTime = new Date();
-			var theDelay = Math.max(1, Math.round(scramConfigs[scram[server.id].currentConfig].wordDelay - (scramConfigs[scram[server.id].currentConfig].wordDelayVariation / 2) +
-			  Math.random() * scramConfigs[scram[server.id].currentConfig].wordDelayVariation));
+			var theDelay = Math.max(1, Math.round(scramConfig.wordDelay - (scramConfig.wordDelayVariation / 2) +
+			  Math.random() * scramConfig.wordDelayVariation));
 			scram[server.id].guessTimer = setTimeout(function() {
 				if (scram[server.id].runState === 'guessing') {
 					utils.chSend(message, 'The `!scram` word was not guessed' +
