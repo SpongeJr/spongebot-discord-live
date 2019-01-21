@@ -160,7 +160,7 @@ spongeBot.quote = {
 	longHelp: 'React with ' + cons.QUOTE_SAVE_EMO + ' to a message to add it the quotes databse!' +
 	  ' Or, type `!quote random <user>` to see a random quote from a user.',
 	do: function(message, parms) {		
-		quotes.q.do(message, parms, BOT);
+		quotes.q.do(message, parms, BOT, gameStats);
 	}
 };
 
@@ -1268,13 +1268,41 @@ BOT.on('ready', () => {
 	if (Math.random() < 0.02) {BOT.channels.get(cons.SPAMCHAN_ID).send('I live!');}
 });
 //-----------------------------------------------------------------------------
+
+BOT.on('raw', async event => {
+	if (!cons.EVENTS.hasOwnProperty(event.t)) return;
+
+	const { d: data } = event;
+	const user = BOT.users.get(data.user_id);
+	const channel = BOT.channels.get(data.channel_id) || await user.createDM();
+
+	if (channel.messages.has(data.message_id)) return;
+
+	const message = await channel.fetchMessage(data.message_id);
+	const emojiKey = (data.emoji.id) ? `${data.emoji.name}:${data.emoji.id}` : data.emoji.name;
+	let reaction = message.reactions.get(emojiKey);
+
+	if (!reaction) {
+		const emoji = new Discord.Emoji(BOT.guilds.get(data.guild_id), data.emoji);
+		reaction = new Discord.MessageReaction(message, emoji, 1, data.user_id === BOT.user.id);
+	}
+
+	BOT.emit(cons.EVENTS[event.t], reaction, user);
+});
+
 BOT.on('messageReactionAdd', (react, whoAdded) => {
 	if (react.emoji.name === cons.QUOTE_SAVE_EMO) {
-		if (!hasAccess(whoAdded.id)) {
+		// temporarily defeated access check logic here to open command up - JK
+		/*
+		if (!hasAccess(whoAdded.id) || true) {
 			utils.chSend(react.message, 'I\'m sorry, I\'m afraid I can\'t do that for you.');
 		} else {
 			quotes.q.addByReact(react, whoAdded, BOT);
 		}
+		*/
+		
+		// temporarily disabled
+		//quotes.q.addByReact(react, whoAdded, BOT);
 	}
 });
 
