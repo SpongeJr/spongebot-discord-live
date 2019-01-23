@@ -189,7 +189,7 @@ var	Command = function(trigger, config) {
 
 var Command = utils.Command;
 
-/*
+
 spongeBot.speak = new Command(
 	"speak",
 	{
@@ -198,7 +198,15 @@ spongeBot.speak = new Command(
 	},
 	MODULES
 );
-*/
+
+spongeBot.btc = new Command(
+	"btc",
+	{
+		moduleName: "speech",
+		disabled: false
+	},
+	MODULES
+);
 
 
 /*

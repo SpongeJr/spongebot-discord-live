@@ -8,6 +8,7 @@ module.exports = {
 			disabled: true,
 			do: function(message, parms, gameStats) {
 				
+				// refactor into:  if (this.timeYet()) ... ?
 				if (!utils.collectTimer(message, message.author.id, 'speak', this.timedCmd, gameStats)) {
 					return false; // can't use it yet!
 				}
@@ -59,6 +60,7 @@ module.exports = {
 			longHelp: "Check current btc:usd exchange rate so you know when to HODL.",
 			timedCmd: {
 				howOften: 45000,
+				gracePeriod: 0,
 				failResponse: 'You can only use this command every <<howOften>>.'
 			}
 		}
