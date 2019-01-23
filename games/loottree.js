@@ -100,13 +100,13 @@ module.exports = {
 			  'about <<next>>. Loot trees typically yield fruit every <<howOften>>. '
 		},
 		tend: {
-			howOften: 45000,
+			howOften: cons.ONE_HOUR / 3,
 			gracePeriod: 0,
 			failResponse: 'You can only tend to your loot fruit every <<howOften>>, ' +
 			  ' and you need to wait <<next>> before you can do it again.'
 		},
 		pick: {
-			howOften: 360000,
+			howOften: cons.ONE_HOUR / 4,
 			gracePeriod: 0,
 			failResponse: 'You can only pick your loot fruit every <<howOften>>, ' +
 			  ' and you need to wait <<next>> before you can do it again.'			

@@ -214,7 +214,7 @@ module.exports = {
 		}
 		
 		if(!timeAllowed) {
-			timeAllowed = acroLen * 12 + 14;
+			timeAllowed = acroLen * 14 + 20;
 		}
 		
 		this.letters = letters;
