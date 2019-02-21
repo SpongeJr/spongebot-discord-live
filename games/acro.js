@@ -64,26 +64,27 @@ module.exports = {
 		
 	},
 	avote: function(message, parms, gameStats) {
+		var author = message.author;
 		if (!this.runState) {
-			utils.chSend(message, message.author + ', the game is not running.' +
+			utils.chSend(message, author.username + ', the game is not running.' +
 			  ' You can start a new game with `!acro`');
 			return;
 		}
 		
 		if (this.runState !== 'vote') {
-			utils.chSend(message, message.author + ', wait for the voting to start!');
+			utils.chSend(message, author.username + ', wait for the voting to start!');
 			return;
 		}
 		
 		var theVote = parseInt(parms);
 		
 		if ((theVote > this.entries.length - 1) || (theVote < 0) || (isNaN(theVote))) {
-			utils.chSend(message, ':warning: Not a valid vote, ' + message.author);
+			utils.chSend(message, ':warning: Not a valid vote, ' + author.username);
 			return;
 		}
 		
 		if (this.entries[theVote].author === message.author.id && !this.config.voteOwn) {
-			utils.chSend(message, message.author + ', you can\'t vote for yourself!');
+			utils.chSend(message, author.username + ', you can\'t vote for yourself!');
 			return;
 		}
 		
@@ -95,6 +96,7 @@ module.exports = {
 		this.votes[message.author.id] = theVote;
 	},
 	do: function(message, parms, gameStats, bankroll) {
+		var author = message.author;
 		// the !acro command itself
 		parms = parms.split(' ');
 		
@@ -119,12 +121,12 @@ module.exports = {
 			var argument = parts[1];
 			if(!parameter || !argument) {
 				if(!parameter && !argument) {
-					utils.chSend(message, utils.makeTag(message.author.id) + ', missing parameter and argument');
+					utils.chSend(message, author.username + ', missing parameter and argument');
 				}
 				else if(!parameter) {
-					utils.chSend(message, utils.makeTag(message.author.id) + ', missing parameter');
+					utils.chSend(message, author.username + ', missing parameter');
 				} else if(!argument) {
-					utils.chSend(message, utils.makeTag(message.author.id) + ', missing argument');
+					utils.chSend(message, author.username + ', missing argument');
 				}
 				return;
 			}
@@ -138,29 +140,29 @@ module.exports = {
 					//Update acroLen
 					acroLen = letters.length;
 				} else {
-					utils.chSend(message, utils.makeTag(message.author.id) + ', invalid `letters` argument');
+					utils.chSend(message, author.username + ', invalid `letters` argument');
 					return;
 				}
 			} else if(parameter === 'table') {
 				if(/^[a-z]+$/.test(argument)) {
 					//We only change "table" if we haven't yet set the letters
 					if(letters !== '') {
-						utils.chSend(message, utils.makeTag(message.author.id) + ', warning: `table` argument overridden by `letters` argument');
+						utils.chSend(message, author.username + ', warning: `table` argument overridden by `letters` argument');
 						continue;
 					}
 					table = argument;
 				} else {
-					utils.chSend(message, utils.makeTag(message.author.id) + ', invalid `table` argument');
+					utils.chSend(message, author.username + ', invalid `table` argument');
 					return;
 				}
 			} else if(parameter === 'playtime') {
 				argument = parseInt(argument);
 				if(!argument) {
-					utils.chSend(message, makeTag(message.author.id) + ', invalid `playtime` argument');
+					utils.chSend(message, author.username + ', invalid `playtime` argument');
 					return;
 				}
 				if(argument <= 0) {
-					utils.chSend(message, makeTag(message.author.id) + ', `playtime` argument must be greater than 0');
+					utils.chSend(message, author.username + ', `playtime` argument must be greater than 0');
 				}
 				timeAllowed = argument;
 				
@@ -169,22 +171,22 @@ module.exports = {
 				var argument = parseInt(argument);
 				if(argument) {
 					if(argument <= 0) {
-						utils.chSend(message, makeTag(message.author.id) + ', `length` argument must be greater than 0');
+						utils.chSend(message, author.username + ', `length` argument must be greater than 0');
 					}
 					//We only change "table" if we haven't yet set the letters
 					if(letters !== '') {
-						utils.chSend(message, utils.makeTag(message.author.id) + ', warning: `length` argument overridden by `letters` argument');
+						utils.chSend(message, author.username + ', warning: `length` argument overridden by `letters` argument');
 						continue;
 					}
 					acroLen = argument;
 				} else {
-					utils.chSend(message, utils.makeTag(message.author.id) + ', invalid `length` argument');
+					utils.chSend(message, author.username + ', invalid `length` argument');
 					return;
 				}
 			} else if(parameter === 'category') {
 				category = argument;
 			} else {
-				utils.chSend(message, utils.makeTag(message.author.id) + ', unknown parameter');
+				utils.chSend(message, author.username + ', unknown parameter');
 			}
 		}
 		
@@ -331,13 +333,14 @@ module.exports = {
 		}, timeAllowed * 1000);
 	},
 	a: function(message, parms) {
+		let author = message.author;
 		if (!this.runState) {
 			utils.chSend(message, 'Acro not running. Start it with `!acro`.');
 			return;
 		}
 		
 		if (this.runState === 'vote') {
-			utils.chSend(message, 'Too slow, ' + message.author +
+			utils.chSend(message, 'Too slow, ' + author.username +
 			  ', voting has begun :slight_frown:');
 			  return;
 		}
@@ -351,7 +354,7 @@ module.exports = {
 		var isLegit = true;
 		
 		if (theirAcro.length !== this.letters.length) {
-			utils.chSend(message, message.author +
+			utils.chSend(message, author.username +
 			  ', that acro is the wrong length!');
 			  isLegit = false;
 		}
@@ -366,13 +369,13 @@ module.exports = {
 		
 		if (isLegit) {
 			if (this.players[message.author]) {
-				utils.chSend(message, message.author + ', I am' +
+				utils.chSend(message, author.username + ', I am' +
 				  'replacing your old submission.');
 			}
 			this.entries[message.author.id] = message.content.slice(2);
-			utils.chSend(message, 'Got it, ' + message.author + '!');
+			utils.chSend(message, 'Got it, ' + author.username + '!');
 		} else {
-			utils.chSend(message, ':warning: ' + message.author +
+			utils.chSend(message, ':warning: ' + author.username +
 			  ', your invalid acro was not accepted :.');
 		}
 	}

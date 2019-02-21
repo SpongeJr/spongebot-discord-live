@@ -5,7 +5,7 @@ var saved = require('../' + cons.OBJECTS_FILENAME);
 var slots = {
 	config: {
 		symbols: {
-			rare: {emo: ':open_mouth:', rarity: 1},
+			rare: {emo: ':btc:', rarity: 1},
 			peng: {emo: ':penguin:', rarity: 4},
 			dolr: {emo: ':dollar:', rarity: 5},
 			sevn: {emo: ':seven:', rarity: 6},
@@ -128,7 +128,8 @@ module.exports = {
 				failResponse: '  :warning:  Please pull slots no faster than about ' +
 				  ' once per second per user.  :warning:'
 			},
-			do: function(message, parms, gameStats, bankroll) {		
+			do: function(message, parms, gameStats, bankroll) {
+				let author = message.author;
 				var payTab = slots.config.payTable;
 				var who = message.author.id;
 
@@ -137,7 +138,7 @@ module.exports = {
 				}
 
 				if (!bankroll.hasOwnProperty(who)) {
-					utils.chSend(message, message.author + ', please open a `!bank` account before playing slots.');
+					utils.chSend(message, author.username + ', please open a `!bank` account before playing slots.');
 					return;
 				}
 				
@@ -146,16 +147,16 @@ module.exports = {
 				var betAmt = parseInt(parms[0]) || 0;
 
 				if (betAmt === 0) {
-					utils.chSend(message, message.author + ', you can\'t play if you don\'t pay.');
+					utils.chSend(message, author.username + ', you can\'t play if you don\'t pay.');
 					return;
 				} else if (betAmt < 0) {
-					utils.chSend(message, message.author + ' thinks they\'re clever making a negative bet.');
+					utils.chSend(message, author.username + ' thinks they\'re clever making a negative bet.');
 					return;
 				} else if (betAmt > bankroll[who].credits) {
-					utils.chSend(message, message.author + ', check your `!bank`. You don\'t have that much.');
+					utils.chSend(message, author.username + ', check your `!bank`. You don\'t have that much.');
 					return;
 				} else if (betAmt === bankroll[who].credits) {
-					utils.chSend(message, message.author + ' just bet the farm on `!slots`!');
+					utils.chSend(message, author.username + ' just bet the farm on `!slots`!');
 				}
 				
 				utils.addBank(who, -betAmt, bankroll);
@@ -190,7 +191,7 @@ module.exports = {
 				for (let i = 0; i < 3; i++) {
 					spinString += slots.config.symbols[spinArr[i]].emo;
 				}
-				spinString += ' (spun by ' + message.author + ')';
+				spinString += ' (spun by ' + author.username + ')';
 				
 				for (let pNum = 0, won = false; ((pNum < payTab.length) && (!won)); pNum++) {
 					
@@ -208,7 +209,7 @@ module.exports = {
 							// winner winner chicken dinner
 							let winAmt = betAmt * payTab[pNum].payout;
 							spinString += '\n :slot_machine: ' +
-							  message.author + ' is a `!slots` winner!\n' + 
+							  message.author.username + ' is a `!slots` winner!\n' + 
 							  ' PAYING OUT: ' + payTab[pNum].payout + ':1' +
 							  ' on a ' + betAmt + ' bet.   Payout =  ' + winAmt;
 							utils.addBank(who, winAmt, bankroll);

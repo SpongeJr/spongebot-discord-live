@@ -21,10 +21,20 @@ var scramConfigs = {
 		wordDelay: 1000,
 		wordDelayVariation: 0,
 		baseAward: 0,
-		letterBounus: 0, 
+		letterBounus: 0,
 		guessTime: 29000,
 		extraGuessTime: 2500,
 		maxMultiplier: 2,
+		minMultiplier: 1
+	},
+	"lightning-scored": {
+		wordDelay: 1000,
+		wordDelayVariation: 0,
+		baseAward: 0,
+		letterBounus: 1,
+		guessTime: 28200,
+		extraGuessTime: 2200,
+		maxMultiplier: 20,
 		minMultiplier: 1
 	}
 };

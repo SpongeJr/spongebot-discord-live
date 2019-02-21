@@ -39,23 +39,22 @@ var debugPrint =function(inpString){
 	}
 };
 //-----------------------------------------------------------------------------
-var spongeBot = {};
+const spongeBot = {};
+const cons = require('./lib/constants.js');
 //-----------------------------------------------------------------------------
 //  MODULES
 //-----------------------------------------------------------------------------
-const cons = require('./lib/constants.js');
-const MODLIST = require('./modules.json');
-const MODULES = {
-	"speech": require(MODLIST.speech)
-};
-const mods = {
-	nq: require(MODLIST.enqueue)
-};
 
-var nq = mods.nq;
+const MODLIST = require('./modules.json');
+const MODULES = {};
+
+for (let m in MODLIST) {
+	MODULES[m] = require(MODLIST[m]);
+}
+
+var nq = MODULES.nq;
 const timey = require('./lib/timey.js');
 var utils = require('./lib/utils.js');
-//var iFic = require('./games/ific.js');
 var acro = require('./games/acro.js');
 var scram = require('./games/scram.js');
 var slots = require('./games/slots.js');
@@ -152,6 +151,9 @@ spongeBot.backup = {
 		utils.chSend(message, 'I ran the backups. Probably.');
 		debugPrint('!backup:  MANUALLY BACKED UP TO: ' + cons.BANK_BACKUP_FILENAME + 
 		  t + '.bak and ' + cons.STATS_BACKUP_FILENAME + t + '.bak');
+		utils.saveStats(cons.MTCWATCH_BACKUP_FILENAME + t + '.bak',
+		  MODULES.mtcbtc.commands.mtc.subCmd.notify.v);
+		debugPrint('!backup: MANUALLY BACKED UP mtcwatch FILE');
 	}
 };
 //-----------------------------------------------------------------------------
@@ -163,50 +165,35 @@ spongeBot.quote = {
 		quotes.q.do(message, parms, BOT, gameStats);
 	}
 };
+//-----------------------------------------------------------------------------
+//  NEW  PATTERNS  HERE
+//-----------------------------------------------------------------------------
+const Command = utils.Command;
 
+const commandList = {
+	"speak": { moduleName: "speech", disabled: true },
+	"btc": { moduleName: "mtcbtc", disabled: false },
+	"mtc": { moduleName: "mtcbtc" },
+	"bank": { moduleName: "collectibles" },
+	"buy": { moduleName: "collectibles", disabled: true },
+	"pointsrace": {moduleName: "khangames", disabled: false },
+	"points": {moduleName: "khangames", disabled: false }
+}
 
-// ---- HEY this is where I once left off with new patterns
-/*
-var	Command = function(trigger, config) {
-	let moduleName = config.moduleName || trigger;
-	let defaults = {
-		disabled: false,
-		help: modules[moduleName].commands[trigger].help,
-		longHelp: modules[moduleName].commands[trigger].longHelp,
-		do: function(message, parms) {
-			modules[moduleName].commands[trigger].do(message, parms);
-		},
-		accessRestrictions: false
-	};
-	let theCommand = defaults;
-		
-	for (let prop in config) {
-		theCommand[prop] = config.prop;
-	}	
-	return theCommand;
-};
-*/
+for (let cmd in commandList) {
+	spongeBot[cmd] = new Command(cmd, commandList[cmd], MODULES);
+}
 
-var Command = utils.Command;
-
-
-spongeBot.speak = new Command(
-	"speak",
-	{
-		moduleName: "speech",
-		disabled: true
-	},
-	MODULES
-);
-
-spongeBot.btc = new Command(
-	"btc",
+spongeBot.subscribe = new Command(
+	"subscribe",
 	{
 		moduleName: "speech",
 		disabled: false
 	},
 	MODULES
 );
+
+spongeBot.pr = spongeBot.pointsrace;
 
 
 /*
@@ -630,56 +617,7 @@ spongeBot.gift = {
 	help: 'If you are a sponge, `!gift <user> <amount>` gives someone some credits.',
 	accessRestrictions: true
 };
-spongeBot.bank = {
-	cmdGroup: 'Fun and Games',
-	do: function(message, parms) {
-		var who;
-		parms = parms.split(' ');
 
-		if (parms[0] === '') {
-			who = message.author.id;
-			
-			if (typeof bankroll[who] === 'undefined') {
-				utils.chSend(message, utils.makeTag(who) + ', I don\'t see an account ' +
-				  'for you, so I\'ll open one with ' + cons.START_BANK + ' credits.');
-				
-				/*
-				var server = bot.guilds.get(SERVER_ID);
-				var role = server.roles.find('name', 'Tester');
-			
-				if (server.roles.has('name', 'Tester')) {
-					debugPrint(' we have a tester!');
-				}
-				
-				//message.member.roles.has(message.guild.roles.find("name", "insert role name here"))
-				*/
-				bankroll[who] = {};
-				bankroll[who].credits = cons.START_BANK;
-				utils.saveBanks(cons.BANK_FILENAME, bankroll);
-				debugPrint('New bankroll made for ' + who + ' via !bank.');
-			} 
-		} else {
-			who = utils.makeId(parms[0]);
-		}
-		
-		if (typeof bankroll[who] === 'undefined') {
-			utils.chSend(message, message.author + ', they don\'t have a bank account.');
-		} else if (isNaN(bankroll[who].credits)) {
-			utils.chSend(message, message.author + ' that bank account looks weird, thanks' +
-			  ' for pointing it out. I\'ll reset it to ' + cons.START_BANK);
-			bankroll[who].credits = cons.START_BANK;
-			utils.saveBanks(cons.BANK_FILENAME, bankroll);
-			debugPrint('Corrupted bankroll fixed for ' + who + ' via !bank.');
-			  
-		} else {
-			utils.chSend(message, utils.makeTag(who) + ' has ' + bankroll[who].credits + ' credits.');
-			utils.chSend(message, utils.makeTag(who) +
-			' has ' + (utils.getStat(who, 'raffle', 'ticketCount', gameStats) || 'no ') + ' :tickets: s.');
-		}
-	},
-	help: '`!bank <user>` reveals how many credits <user> has. With no <user>, ' +
-	  'will either show your own bank, or create a new account for you.'
-};
 spongeBot.exchange = {
 	cmdGroup: 'Giveaways and Raffle',
 	do: function(message, parms) {
@@ -1271,13 +1209,28 @@ spongeBot.memory = {
 };
 //-----------------------------------------------------------------------------
 BOT.on('ready', () => {
+	
+	// do module inits:
+
+	for (let m in MODULES) {
+		if (!MODULES[m].init) {
+			debugPrint(`(info) module ${m} has no .init()!`);
+		} else {
+			MODULES[m].init();
+		}
+	}
+	
 	debugPrint('Spongebot version ' + cons.VERSION_STRING + ' READY!');
-	BOT.user.setGame("!help");
-	if (Math.random() < 0.02) {BOT.channels.get(cons.SPAMCHAN_ID).send('I live!');}
+	
+	BOT.user.setActivity('for !help & mitcoin changes', { type: 'WATCHING' });
+	
+	
+	if (Math.random() < 0.001) {BOT.channels.get(cons.SPAMCHAN_ID).send('I live!');}
 });
 //-----------------------------------------------------------------------------
 
 BOT.on('raw', async event => {
+
 	if (!cons.EVENTS.hasOwnProperty(event.t)) return;
 
 	const { d: data } = event;
@@ -1297,7 +1250,57 @@ BOT.on('raw', async event => {
 
 	BOT.emit(cons.EVENTS[event.t], reaction, user);
 });
+BOT.on('presenceUpdate', (oldMemb, newMemb) => {
 
+	if (newMemb.user.id === cons.MTCBOT_ID) {
+		let oldGame = oldMemb.presence.game;
+		let newGame = newMemb.presence.game;
+
+		if (oldGame && newGame) {
+			if (oldGame.name && newGame.name && newMemb.guild.id === cons.MTCBOT_WATCH_SERVER) {
+				
+				let parseMtc = function(str) {
+					if (!str.name) { return false; }
+					let _str = str.name.match(/\d|\./g);
+					if (!_str) {
+						debugPrint('! parseMtc(): No match on regex, returning.');
+						return false;
+					}
+					return parseFloat(_str.join(''));
+				}
+				
+				let oldVal = parseMtc(oldGame);
+				let newVal = parseMtc(newGame);
+
+				if (oldVal && newVal) {
+					//debugPrint(`  mtc update: ${oldVal} -> ${newVal}`);
+					
+					if (CONFIG.mtcticker) {
+						let tickerMess = '`MTC: ' + newVal + '`';
+						let change = Math.abs(newVal - oldVal);
+						
+						if (newVal > oldVal) {
+							tickerMess += ` [ :arrow_up_small: ${change.toFixed(3)} ]`;
+						} else if (newVal < oldVal) {
+							tickerMess += ` [ :small_red_triangle_down: ${change.toFixed(3)} ]`;
+						} else {
+							tickerMess += ` [ :heavy_minus_sign: 0.000 ] `;
+						}
+						BOT.channels.get(cons.MTCTICKERCHAN_ID).send(tickerMess);
+					}
+
+					if (newVal > oldVal) { MODULES.mtcbtc.commands.mtc.rise(newVal, BOT);}
+					else if (oldVal > newVal) { MODULES.mtcbtc.commands.mtc.fall(newVal, BOT);}
+
+				} else {
+					debugPrint(`! mtc update FAIL: ${oldVal} -> ${newVal}`);
+				}
+
+			}
+		}
+		
+	}
+});
 BOT.on('messageReactionAdd', (react, whoAdded) => {
 	if (react.emoji.name === cons.QUOTE_SAVE_EMO) {
 		// temporarily defeated access check logic here to open command up - JK
@@ -1354,7 +1357,7 @@ BOT.on('message', message => {
 							debugPrint('!!! WARNING:  BOT.on(): missing .do() on ' + theCmd +
 							  ', ignoring user command !' + theCmd);
 						} else {
-							spongeBot[theCmd].do(message, parms, gameStats);
+							spongeBot[theCmd].do(message, parms, gameStats, bankroll);
 						}
 					}
 				}

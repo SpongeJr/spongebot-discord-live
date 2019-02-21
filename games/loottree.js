@@ -217,7 +217,7 @@ module.exports = {
 					//raffle ticket! DOES award, be careful with rarity!
 					if (Math.floor(Math.random() * tree.config.ticketRarity) === 0) {
 						utils.chSend(message, utils.makeTag(who) + ', what\'s this? A raffle ticket ' +
-						':tickets: fell out of the tree! (`!giveways` for more info.)');
+						':tickets: fell out of the tree! (`!giveaways` for more info.)');
 						utils.alterStat(who, 'raffle', 'ticketCount', 1, gameStats);
 					
 					}

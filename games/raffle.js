@@ -68,23 +68,32 @@ module.exports = {
 				}
 			} else if (parms[0] === 'addrole') {
 				
+				let author = message.author;
+				
 				if (message.channel.type === 'dm') {
-					utils.chSend(message, 'Sorry, ' + message.author + ', you need to do this on the server, ' +
+					utils.chSend(message, 'Sorry, ' + author.username + ', you need to do this on the server, ' +
 					'and not in DM, because I don\'t know where to give you the giveaways role otherwise!');
 					return;
 				}
-
+				
+				if (message.guild.id !== '402126095056633859') {
+					console.log(message.guild.id);
+					utils.chSend(message, `Sorry ${author.username}, that's meant for another server. \n` +
+					  ` You can DM <@167711491078750208> for an invite to it if you'd like.`);
+					return;
+				}
+				
 				let role = message.guild.roles.find('name', 'giveaways');
 				if (message.member.roles.has(role.id)) {
 					utils.debugPrint('!giveaways addrole: Did not add role or award ticket because they had it already.');
-					utils.chSend(message, message.author + ' I think you already had that role.');
+					utils.chSend(message, author.username + ' I think you already had that role.');
 				} else {
 					message.member.addRole(role);
-					utils.chSend(message, message.author + ', I\'ve given you the `giveaways` role. ' + 
+					utils.chSend(message, author.username + ', I\'ve given you the `giveaways` role. ' + 
 					' You might be pinged at any time of day for giveaways, raffles, and related announcements and info.' +
 					'\n If something went wrong, you don\'t have the role, or you didn\'t really want it, please ping ' +
 					' <@167711491078750208> to sort it out. And... good luck in the giveaways!');
-					utils.chSend(message, message.author + ', I\'m also giving you a free :tickets: with your new role! You now have ' +
+					utils.chSend(message, author.username + ', I\'m also giving you a free :tickets: with your new role! You now have ' +
 					  utils.alterStat(message.author.id, 'raffle', 'ticketCount', 1, gameStats) + ' raffle tickets!');
 				}
 			} else if (parms[0] === 'categories') {

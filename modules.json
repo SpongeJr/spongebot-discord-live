@@ -1,4 +1,8 @@
 {
 	"enqueue": "./modules/enqueue.js",
-	"speech": "./modules/speech.js"
+	"speech": "./modules/speech.js",
+	"mtcbtc": "./modules/mtcbtc.js",
+	"collectibles": "./modules/collectibles.js",
+	"nq": "./modules/enqueue.js",
+	"khangames": "./modules/khangames.js"
 }
