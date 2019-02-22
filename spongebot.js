@@ -177,7 +177,8 @@ const commandList = {
 	"bank": { moduleName: "collectibles" },
 	"buy": { moduleName: "collectibles", disabled: true },
 	"pointsrace": {moduleName: "khangames", disabled: false },
-	"points": {moduleName: "khangames", disabled: false }
+	"points": {moduleName: "khangames", disabled: false },
+	"tubesubs": { moduleName: "youtube" }
 }
 
 for (let cmd in commandList) {

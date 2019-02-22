@@ -4,5 +4,6 @@
 	"mtcbtc": "./modules/mtcbtc.js",
 	"collectibles": "./modules/collectibles.js",
 	"nq": "./modules/enqueue.js",
-	"khangames": "./modules/khangames.js"
+	"khangames": "./modules/khangames.js",
+	"youtube": "./modules/youtube.js"
 }
