@@ -1224,8 +1224,7 @@ BOT.on('ready', () => {
 	debugPrint('Spongebot version ' + cons.VERSION_STRING + ' READY!');
 	
 	BOT.user.setActivity('for !help & mitcoin changes', { type: 'WATCHING' });
-	
-	
+		
 	if (Math.random() < 0.001) {BOT.channels.get(cons.SPAMCHAN_ID).send('I live!');}
 });
 //-----------------------------------------------------------------------------
@@ -1316,6 +1315,11 @@ BOT.on('messageReactionAdd', (react, whoAdded) => {
 		// temporarily disabled
 		//quotes.q.addByReact(react, whoAdded, BOT);
 	}
+});
+
+BOT.on('rateLimit', (info) => {
+	console.log('### RATE LIMITED. Data follows');
+	console.log(JSON.stringify(info));
 });
 
 BOT.on('message', message => {
