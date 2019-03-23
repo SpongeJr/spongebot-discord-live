@@ -101,7 +101,7 @@ module.exports = {
 						bankroll[who] = {};
 						bankroll[who].credits = cons.START_BANK;
 						utils.saveBanks(cons.BANK_FILENAME, bankroll);
-						debugPrint('New bankroll made for ' + who + ' via !bank.');
+						utils.debugPrint('New bankroll made for ' + who + ' via !bank.');
 					}
 					
 				} else {
@@ -115,7 +115,7 @@ module.exports = {
 					  ' for pointing it out. I\'ll reset it to ' + cons.START_BANK);
 					bankroll[who].credits = cons.START_BANK;
 					utils.saveBanks(cons.BANK_FILENAME, bankroll);
-					debugPrint('Corrupted bankroll fixed for ' + who + ' via !bank.');
+					utils.debugPrint('Corrupted bankroll fixed for ' + who + ' via !bank.');
 					  
 				} else {
 					utils.chSend(message, utils.idToNick(who, gameStats)+ ' has ' + bankroll[who].credits + ' credits.');
