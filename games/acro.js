@@ -163,6 +163,10 @@ module.exports = {
 				}
 				if(argument <= 0) {
 					utils.chSend(message, author.username + ', `playtime` argument must be greater than 0');
+					return;
+				} else if(argument > 14400) {
+					utils.chSend(message, author.username + ', `playtime` argument can be 14400 max (four hours).');
+					return;
 				}
 				timeAllowed = argument;
 				
