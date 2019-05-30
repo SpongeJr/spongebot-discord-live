@@ -89,9 +89,9 @@ module.exports = {
 		}
 		
 		if (typeof this.votes[message.author.id] === 'undefined') {
-			utils.chSend(message, message.author + ' your vote was recorded.');
+			utils.chSend(message, author.username + ' your vote was recorded.');
 		} else {
-			utils.chSend(message, message.author + ', I changed your vote for you.');
+			utils.chSend(message, author.username + ', I changed your vote for you.');
 		}
 		this.votes[message.author.id] = theVote;
 	},
@@ -190,6 +190,11 @@ module.exports = {
 			}
 		}
 		
+		if (acroLen > 30) {
+			utils.chSend(message, author.username + ', acros need to be kept to a max of 30 letters, please try a different setup.');
+			return;
+		}
+		
 		// start a new game after we know the arguments work
 		this.votes = {};
 		this.players = {};
@@ -253,7 +258,7 @@ module.exports = {
 				for (var i = 0; i < acro.entries.length; i++) {
 					theText += '`!avote ' + i + '`: ';
 					theText += acro.entries[i].entry + '\n';
-					//theText += ' (by ' + utils.makeTag(acro.entries[i].author) + ')\n';
+					//theText += ' (by ' + acro.entries[i].author + ')\n';
 					acro.entries[i].voteCount = 0;
 				}
 				theText += '=-=-=-=-=-=-=-=-=\n';
@@ -279,7 +284,7 @@ module.exports = {
 						utils.chSend(message, '`[#' + i +
 						  '] ' + acro.entries[i].voteCount + 
 						  ' votes for: ' + acro.entries[i].entry +
-						  '` (by ' + utils.makeTag(acro.entries[i].author) + ')\n');
+						  '` (by ' + acro.entries[i].author + ')\n');
 
 						if (winner === false) {
 							if (acro.entries[i].voteCount > 0) {
@@ -304,22 +309,22 @@ module.exports = {
 						//utils.chSend(message, 'Number of !acro winners: ' + winArr.length);
 						if (winArr.length === 1) {
 							utils.alterStat(acro.entries[winner].author, 'acro', 'wins', 1, gameStats);
-							utils.chSend(message, utils.makeTag(acro.entries[winner].author) + ' won `!acro`!' +
+							utils.chSend(message, acro.entries[winner].author + ' won `!acro`!' +
 							  ' That makes ' + gameStats[acro.entries[winner].author].acro.wins + ' wins!');
 						} else {
 							var winStr = 'Looks like we have a tie in `!acro`! Winners: ';
 							for (var i = 0; i < winArr.length; i++) {
-								winStr += utils.makeTag(acro.entries[winArr[i]].author) + ' ';
+								winStr += utils.acro.entries[winArr[i]].author + ' ';
 							}
 							utils.chSend(message, winStr);
 						}
 						if ((acro.entries.length >= acro.config.minPlayersForCredits) && winArr.length === 1) {
-							utils.chSend(message, utils.makeTag(acro.entries[winner].author) + ' won `!acro` with ' +
+							utils.chSend(message, acro.entries[winner].author + ' won `!acro` with ' +
 							  'at least ' + acro.config.minPlayersForCredits + ' entries, and' +
 							  ' won ' + acro.config.winCredits + ' credits!');
 							utils.addBank(acro.entries[winner].author, acro.config.winCredits, bankroll);
 							utils.alterStat(acro.entries[winner].author, 'acro', 'credwins', 1, gameStats);
-							utils.chSend(message, utils.makeTag(acro.entries[winner].author) +
+							utils.chSend(message, utils.acro.entries[winner].author +
 							  ' got a crediting acro win and now has ' +
 							  gameStats[acro.entries[winner].author].acro.credwins +
 							  ' crediting acro wins!');
