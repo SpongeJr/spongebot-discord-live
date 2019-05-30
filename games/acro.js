@@ -318,7 +318,7 @@ module.exports = {
 						} else {
 							var winStr = 'Looks like we have a tie in `!acro`! Winners: ';
 							for (var i = 0; i < winArr.length; i++) {
-								winStr += utils.acro.entries[winArr[i]].author + ' ';
+								winStr += acro.entries[winArr[i]].author + ' ';
 							}
 							utils.chSend(message, winStr);
 						}
@@ -328,7 +328,7 @@ module.exports = {
 							  ' won ' + acro.config.winCredits + ' credits!');
 							utils.addBank(acro.entries[winner].author, acro.config.winCredits, bankroll);
 							utils.alterStat(acro.entries[winner].author, 'acro', 'credwins', 1, gameStats);
-							utils.chSend(message, utils.acro.entries[winner].author +
+							utils.chSend(message, acro.entries[winner].author +
 							  ' got a crediting acro win and now has ' +
 							  gameStats[acro.entries[winner].author].acro.credwins +
 							  ' crediting acro wins!');
