@@ -1,7 +1,6 @@
 const cons = require('../lib/constants.js');
 const utils = require('../lib/utils.js');
 const request = require('request');
-const timey = require('../lib/timey.js');
 
 const gameConfigs = {
 	pointsRace: {

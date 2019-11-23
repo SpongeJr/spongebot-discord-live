@@ -22,6 +22,7 @@ const CONFIG = require('../config.json');
 const MYPALS = require('../mypals.json');
 const BOT = new Discord.Client();
 const SPONGEBOT_ID = 402122635552751616;
+const gbl = {}; // GLOBALS OBJECT
 
 var debugPrint =function(inpString){
 // console.log optional replacement
@@ -52,18 +53,18 @@ for (let m in MODLIST) {
 	MODULES[m] = require(MODLIST[m]);
 }
 
-var nq = MODULES.nq;
-const timey = require('./lib/timey.js');
-var utils = require('./lib/utils.js');
-var acro = require('./games/acro.js');
-var scram = require('./games/scram.js');
-var slots = require('./games/slots.js');
-var tree = require('./games/loottree.js');
-var raffle = require('./games/raffle');
-var quotes = require('./games/quotes.js');
-var adspam = require('./lib/adspam.js');
-var memory = require('./games/memory.js');
-var cattle = require('./games/cattle.js');
+const nq = MODULES.nq;
+const timey = MODULES.timey;
+const utils = require('./lib/utils.js');
+const acro = require('./games/acro.js');
+const scram = require('./games/scram.js');
+const slots = require('./games/slots.js');
+const tree = require('./games/loottree.js');
+const raffle = require('./games/raffle');
+const quotes = require('./games/quotes.js');
+const adspam = require('./lib/adspam.js');
+const memory = require('./games/memory.js');
+const cattle = require('./games/cattle.js');
 
 var botStorage = {};
 var bankroll = {};
@@ -178,7 +179,7 @@ const commandList = {
 	"buy": { moduleName: "collectibles", disabled: true },
 	"pointsrace": {moduleName: "khangames", disabled: false },
 	"points": {moduleName: "khangames", disabled: false },
-	"tubesubs": { moduleName: "youtube" }
+	"tubesubs": { moduleName: "youtube" },
 }
 
 for (let cmd in commandList) {
@@ -220,6 +221,29 @@ spongeBot.q = {
 	cmdGroup: nq.commands.q.cmdGroup,
 	do: function(message, parms) {
 		nq.commands.q.do(message, parms, gameStats);
+	}
+};
+//-----------------------------------------------------------------------------
+spongeBot.uptime = {
+	disabled: false,
+	accessRestrictions: false,
+
+	cmdGroup: 'Miscellaneous',
+	help: timey.commands.uptime.help,
+	longHelp: timey.commands.uptime.longHelp,
+	do: function(message, parms) {
+		timey.commands.uptime.do(message, parms, gameStats, gbl);
+	}
+};
+spongeBot.downtime = {
+	disabled: false,
+	accessRestrictions: false,
+
+	cmdGroup: 'Miscellaneous',
+	help: timey.commands.downtime.help,
+	longHelp: timey.commands.downtime.longHelp,
+	do: function(message, parms) {
+		timey.commands.downtime.do(message, parms, gameStats, gbl);
 	}
 };
 //-----------------------------------------------------------------------------
@@ -1017,10 +1041,9 @@ spongeBot.timer = {
 spongeBot.time = {
 	cmdGroup: 'Miscellaneous',
 	do: function(message, parms) {
-		var now = new Date();
-		var outp = '';
+		let outp = '';
 		parms = parms.split(' ');
-		outp = '`' + timey.timeStr(parms, now) + '`';
+		outp = '`' + timey.timeStr(parms) + '`';
 		utils.chSend(message, outp);
 	},
 	help: '`!time [ long | iso | raw ]`: Shows current time.',
@@ -1233,16 +1256,25 @@ spongeBot.memory = {
 BOT.on('ready', () => {
 	
 	// do module inits:
+	let readyStr = "";
+	let moduleStr = "";
+	let timeStr = "";
 
 	for (let m in MODULES) {
+		moduleStr += m + "  ";
 		if (!MODULES[m].init) {
 			debugPrint(`(info) module ${m} has no .init()!`);
 		} else {
-			MODULES[m].init();
+			MODULES[m].init(BOT);
 		}
 	}
-	
-	debugPrint('Spongebot version ' + cons.VERSION_STRING + ' READY!');
+
+	gbl.onlineTimestamp = new Date();
+	readyStr += "Spongebot version " + cons.VERSION_STRING + " READY!";
+	readyStr += `\nModules: ${moduleStr}`;
+	readyStr += `\n>> Online at ${gbl.onlineTimestamp}\n`;
+
+	debugPrint(readyStr);
 	
 	BOT.user.setActivity('for !help & mitcoin changes', { type: 'WATCHING' });
 		
@@ -1372,7 +1404,7 @@ BOT.on('message', message => {
 							  ', ignoring limited-access command !' + theCmd);
 						} else {
 							// all good, run it
-							spongeBot[theCmd].do(message, parms, gameStats);
+							spongeBot[theCmd].do(message, parms, gameStats, gbl);
 						}
 					}
 				} else {					
