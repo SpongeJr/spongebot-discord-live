@@ -501,6 +501,28 @@ spongeBot.raffle = {
 	},
 	help: 'Commands for working with raffles'
 };
+spongeBot.runraffle = {
+	cmdGroup: 'Giveaways and Raffle',
+	do: function(message, parms) {
+		raffle.runraffle.do(message, parms, gameStats, bankroll);
+	},
+	help: 'Usage: `runraffle <raffle ID>`. The raffle must not be scheduled to run in the future.'
+}
+spongeBot.list = {
+	cmdGroup: 'Giveaways and Raffle',
+	do: function(message, parms) {
+		raffle.list.do(message, parms, gameStats, bankroll);
+	},
+	help: 'The `list` command lists off details about currently running raffles.'	
+}
+spongeBot.enter = {
+	cmdGroup: 'Giveaways and Raffle',
+	do: function(message, parms) {
+		raffle.enter.do(message, parms, gameStats, bankroll);
+	},
+	help: 'Use `enter <# of tickets> <raffle ID>` to enter a raffle.\n' +
+		'Example: `enter 7 awesomegame` to enter a raffle called "awesomegame" with 7 of your tickets.'
+};
 spongeBot.ticket = {
 	do: function(message, parms) {
 		raffle.subCmd.ticket.do(message, parms, gameStats);
@@ -618,7 +640,6 @@ spongeBot.gift = {
 	help: 'If you are a sponge, `!gift <user> <amount>` gives someone some credits.',
 	accessRestrictions: true
 };
-
 spongeBot.exchange = {
 	cmdGroup: 'Giveaways and Raffle',
 	do: function(message, parms) {

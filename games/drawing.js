@@ -3,159 +3,11 @@
 
 const utils = require('../lib/utils.js');
 const cons = require('../lib/constants.js');
-const raffleData = require('../../data/raffle.json');
-const giveaways = require('../../data/giveaways.json');
+var giveaways = require('../../data/giveaways.json');
 
 module.exports = {
 	startNum: 1,
 	v: {},
-	runraffle: {
-		do: function(message, parms, gameStats) {
-			let who = message.author.id;
-			if (who !== cons.SPONGE_ID) {
-				utils.chSend(message, "Sorry, only Sponge can start raffles right now!");
-				return;
-			}
-			
-			let raffleId = parms;
-			
-			if (!raffleData[raffleId]) {
-				utils.chSend(message, "That's not a valid raffle ID.");
-				return;
-			}
-			
-			let when = raffleData[raffleId].date;
-			let now = new Date().valueOf();
-			let diff = Math.abs(now - when);
-			
-			if (now < when) {
-				utils.chSend(message, `:hourglass: It's not time for the **${raffleId}** raffle for another ${utils.msToTime(diff)}!`);
-				return;
-			}
-			utils.chSend(message, ":tickets: :tickets: :tickets: RAFFLE TIME! :tickets: :tickets: :tickets:");
-			
-			let entrants = [];
-			let str = '\n Who is entered: ';
-			for (let playerId in gameStats) {
-				if (gameStats[playerId].raffle) {
-					if (gameStats[playerId].raffle.entered) {
-						if (gameStats[playerId].raffle.entered[raffleId]) {
-							entrants.push({
-								"who": playerId,
-								"tickets": gameStats[playerId].raffle.entered[raffleId]
-							});
-						}
-					}
-				}
-			}
-			
-			let totalEntrants = 0;
-			let totalTickets = 0;
-			let currentNum = 0;
-			for (let entrantNum = 0; entrantNum < entrants.length; entrantNum++) {
-				
-				let nick = "";
-				let who = entrants[entrantNum].who
-				if (gameStats[who].profile) {
-					nick = gameStats[who].profile.nick || "?";
-				}
-				let tix = entrants[entrantNum].tickets;
-				let endNum = currentNum + tix - 1;
-				
-				let rangeStr = "\n#" + `${currentNum} - ${endNum}`.padStart(12, " ");
-				
-				str += "\n`" + rangeStr + "`";
-				str += `(:tickets: x ${tix}): **${nick}** (${who})`;
-				currentNum = endNum + 1;
-				totalEntrants++;
-				totalTickets += tix;
-			}
-
-			str += `\n\n TOTAL ENTRANTS: [ **${totalEntrants}** ]  ...  TOTAL TICKETS ENTERED: [ **${totalTickets}** ]`;
-			utils.chSend(message, str);
-		}
-	},
-	list: {
-		do: function(message, parms, gameStats) {
-			
-			let who = message.author.id;			
-			let raffleStat = gameStats[who].raffle || {};
-			raffleStat.entered = raffleStat.entered || {};
-
-			str = "";
-
-			for (let raffleId in raffleData) {
-				
-				tixEntered =  raffleStat.entered[raffleId];
-				
-				str += `\nRaffle ID: **${raffleId}**\n`;
-				str += `  ... is scheduled to take place on: ${new Date(raffleData[raffleId].date)}\n`;
-				if (tixEntered) {
-					str += `  _You have ${tixEntered} tickets entered._\n`;
-				}
-			}			
-			utils.chSend(message, str);
-		}
-	},
-	enter: {
-		do: function(message, parms, gameStats) {
-			let who = message.author.id;
-			
-			if (!gameStats[who]) {
-				utils.chSend(message, "You don't seem to have any raffle tickets yet!");
-				return;
-			}
-			
-			let raffleStat = gameStats[who].raffle;
-			
-			if (!raffleStat) {
-				utils.chSend(message, "You don't seem to have any raffle tickets yet!");
-				return;
-			}
-			
-			raffleStat.ticketCount = raffleStat.ticketCount || 0;
-			let ticketsOwned = raffleStat.ticketCount;
-	
-			parms = parms.split(' ');			
-			let numTickets = parseInt(parms[0], 10) || 0;
-			parms.shift();
-			parms = parms.join(' ');
-			let raffleId = parms;
-
-			if (numTickets < 1) {
-				utils.chSend(message, 'Use `enter <# of tickets> <raffle ID>` to enter a raffle.\n' +
-				  'Example: `enter 7 awesomegame` to enter a raffle called "awesomegame" with 7 of your tickets.');
-				return;
-			} else if (numTickets > ticketsOwned) {
-				utils.chSend(message, `You can't enter ${numTickets} because you only have ${ticketCount}!`);
-				return;
-			}
-			
-			// if we're here, we have legitimate ticket number. check raffleId next.
-			
-			if (!raffleData.hasOwnProperty(raffleId)) {
-				utils.chSend(message, `${raffleId} That's not a valid Raffle ID. Check the list.`);
-				return;
-			}
-			
-			raffleStat.ticketCount -= numTickets;
-			
-			if (!raffleStat.entered) {
-				raffleStat.entered = {};
-			}
-			
-			if (!raffleStat.entered[raffleId]) {
-				raffleStat.entered[raffleId] = 0;
-			}
-			
-			raffleStat.entered[raffleId] += numTickets;
-			utils.chSend(message, `Okay! I've entered ${numTickets} of your raffle tickets into the "${raffleId}" raffle.` +
-			  `\nYou now have ${raffleStat.entered[raffleId]} tickets entered into that raffle, and you have ${raffleStat.ticketCount} tickets left.`);
-			
-			utils.setStat(who, "raffle", "ticketCount", raffleStat.ticketCount, gameStats);
-			utils.setStat(who, "raffle", "entered", raffleStat.entered, gameStats);
-		}
-	},
 	giveaways: {
 		do: function(message, parms, gameStats) {
 			var str = '';
@@ -309,6 +161,11 @@ module.exports = {
 				  '(use !time to find out official server time)');
 			}
 		},
+		enter: {
+			do: function(message) {
+				
+			}
+		}
 		drawing: {
 			do: function(message, parms, gameStats, raf) {
 				// raf is "this" from previous scope, which is global module context
