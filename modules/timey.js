@@ -103,29 +103,31 @@ module.exports = {
 	commands: {
 		uptime: {
 			subCmd: {},
-			help: "See how since SpongeBot came online.",
+			help: "See how long since SpongeBot came online.",
 			longHelp: "See how since SpongeBot came online.",
 			do: function(message, args, gameStats, gbl) {
 				let outStr = "";
-				outStr += `I woke up at ${gbl.onlineTimestamp}.`;
 				
-				utils.chSend(message, outStr);
-			},
-		},
-		downtime: {
-			subCmd: {},
-			help: "See how since SpongeBot was down.",
-			longHelp: "See how since SpongeBot was down.",
-			do: function(message, args, gameStats, gbl) {
-				let outStr = "";
 				let onTime = new Date(gbl.onlineTimestamp);
 				let nowTime = new Date();
 				let sinceDown = utils.msToTime(nowTime - onTime);
+				outStr += `I woke up at ${onTime}. `;
 				outStr += `It has been \` ${sinceDown}\` since the last crash or restart.`;
-				
 				utils.chSend(message, outStr);
-			},
+			}
+		},
+		setevent: {
+			subCmd: {},
+			help: "Setup an event.",
+			longHelp: "Setup an event. Syntax: addevent <property> <value>\nUse `addevent` to save."
+		},
+		addevent: {
+			subCmd: {},
+			help: "Add an event.",
+			longHelp: "Save an event that you have setup with `setevent`.",
+			do: function(message, args, gameStats, gbl) {
+				let requiredProps = ["eventName", "eventTime", "announceTime", "announceText", "announceChannels"];
+			}
 		}
-		
 	}
 };
