@@ -1,8 +1,8 @@
-var cons = require('../lib/constants.js');
-var utils = require('../lib/utils.js');
-var v = {};
-var quotes = require('../' + cons.DATA_DIR + cons.QUOTES_FILE);
-var Quote = function(theQ) {
+let cons = require('../lib/constants.js');
+let utils = require('../lib/utils.js');
+let v = {};
+let quotes = require('../' + cons.DATA_DIR + cons.QUOTES_FILE);
+let Quote = function(theQ) {
 	this.quote = theQ.quote || "";
 	this.addedBy = {
 		id: theQ.id || "unknown",
@@ -22,13 +22,13 @@ var Quote = function(theQ) {
 module.exports = {
 	q: {
 		addByReact: function(react, userAdded, client) {
-			var message = react.message;
-			var idAdded = userAdded.id;
-			var said = react.message.content;
-			var whoSaid = react.message.author;
-			var quotesBySameUser;
-			var theMess;
-			var theQ = new Quote({
+			let message = react.message;
+			let idAdded = userAdded.id;
+			let said = react.message.content;
+			let whoSaid = react.message.author;
+			let quotesBySameUser;
+			let theMess;
+			let theQ = new Quote({
 				"quote": said,
 				"id": idAdded,
 				"nick": userAdded.username
@@ -44,7 +44,7 @@ module.exports = {
 			
 			// look for said in qBSU		
 			if (quotesBySameUser.find(function(element){return element.quote === said;})) {
-				utils.chSend(message, `That is already a quote by ${whoSaid.username}, ${userAdded.username}.`);
+				userAdded.send(`That is already a quote by ${whoSaid.username}, ${userAdded.username}.`);
 				return;
 			}
 
@@ -62,25 +62,35 @@ module.exports = {
 				theMess += `The oldest quote has been knocked off. It was "${bumped.quote}".`;
 			}
 
-			utils.chSend(react.message, theMess);
+			userAdded.send(theMess);
 			utils.saveObj(quotes, cons.QUOTES_FILE);
 		},
 		subCmd: {
 			random: {
 				do: function(message, parms, client, gameStats) {
-					var who = utils.makeId(parms);
-					var addedBy;
-
+					
+					let who;
 					if (!quotes.hasOwnProperty(message.guild.id)) {
 						quotes[message.guild.id] = {};
 					}
-
+					
+					if (!parms) {
+						
+						let guildQuotesArr = Object.entries(quotes[message.guild.id]);
+						//console.log(guildQuotesArr);
+						who = guildQuotesArr[Math.floor(Math.random() * guildQuotesArr.length)][0];
+					} else {					
+						who = utils.makeId(parms);
+					}
+					
+					let addedBy;
+					
 					if (quotes[message.guild.id].hasOwnProperty(who)) {
-						var theStr = '';
-						var userQs = JSON.stringify(quotes[message.guild.id][who]);
+						let theStr = '';
+						let userQs = JSON.stringify(quotes[message.guild.id][who]);
 						userQs = JSON.parse(userQs); 
-						var oneQ = utils.listPick(userQs)[0];
-						theStr += `"${oneQ.quote}" _- ${utils.idToNick(who, gameStats)}_ `;
+						let oneQ = utils.listPick(userQs)[0];
+						theStr += `"${oneQ.quote}" _- **${utils.idToNick(who, gameStats)}**_ `;
 						when = new Date(oneQ.timestamp);
 						when = when.toString().split(' GMT')[0];
 						addedBy = oneQ.addedBy;
@@ -108,8 +118,8 @@ module.exports = {
 			},
 			save: {
 				do: function(message, parms) {
-					var server = cons.SERVER_ID;
-					var filename = cons.QUOTES_FILE;
+					let server = cons.SERVER_ID;
+					let filename = cons.QUOTES_FILE;
 					//utils.saveObj(server, 'quotes', quotes.guild, filename);
 					utils.saveObj(quotes, cons.QUOTES_FILE);
 					console.log(quotes.guild);
@@ -125,7 +135,7 @@ module.exports = {
 				return;
 			}
 			
-			var sub = parms[0].toLowerCase(); // sub is the possible subcommand
+			let sub = parms[0].toLowerCase(); // sub is the possible subcommand
 			parms.shift(); // lop off the command that got us here
 			
 			if (this.subCmd.hasOwnProperty(sub)) {
