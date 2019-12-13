@@ -235,17 +235,6 @@ spongeBot.uptime = {
 		timey.commands.uptime.do(message, parms, gameStats, gbl);
 	}
 };
-spongeBot.downtime = {
-	disabled: false,
-	accessRestrictions: false,
-
-	cmdGroup: 'Miscellaneous',
-	help: timey.commands.downtime.help,
-	longHelp: timey.commands.downtime.longHelp,
-	do: function(message, parms) {
-		timey.commands.downtime.do(message, parms, gameStats, gbl);
-	}
-};
 //-----------------------------------------------------------------------------
 spongeBot.collect = {
 	help: 'Collects from your weekly loot bag! What will you find?',
@@ -1355,18 +1344,10 @@ BOT.on('presenceUpdate', (oldMemb, newMemb) => {
 	}
 });
 BOT.on('messageReactionAdd', (react, whoAdded) => {
-	if (react.emoji.name === cons.QUOTE_SAVE_EMO) {
-		// temporarily defeated access check logic here to open command up - JK
-		/*
-		if (!hasAccess(whoAdded.id) || true) {
-			utils.chSend(react.message, 'I\'m sorry, I\'m afraid I can\'t do that for you.');
-		} else {
-			quotes.q.addByReact(react, whoAdded, BOT);
-		}
-		*/
-		
-		// temporarily disabled
-		//quotes.q.addByReact(react, whoAdded, BOT);
+
+	if (react.emoji.identifier === cons.QUOTE_SAVE_EMO) {
+		//utils.chSend(react.message, 'I\'m sorry, I\'m afraid I can\'t do that for you.');
+		quotes.q.addByReact(react, whoAdded, BOT);
 	}
 });
 
