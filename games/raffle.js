@@ -127,7 +127,7 @@ module.exports = {
 				  'Example: `enter 7 awesomegame` to enter a raffle called "awesomegame" with 7 of your tickets.');
 				return;
 			} else if (numTickets > ticketsOwned) {
-				utils.chSend(message, `You can't enter ${numTickets} because you only have ${ticketCount}!`);
+				utils.chSend(message, `You can't enter ${numTickets} because you only have ${ticketsOwned}!`);
 				return;
 			}
 			
@@ -158,8 +158,16 @@ module.exports = {
 	},
 	giveaways: {
 		do: function(message, parms, gameStats) {
-			var str = '';
-			var count = 0;
+			
+			utils.chSend(message, "I'm transitioning to a new raffle system right now. " +
+			  " The !giveaways command is being replaced by new commands.\n\n" + 
+			  " Try: \n`!list` instead of `!giveaways list`" + 
+			  " \n`!addrole giveaways` instead of `!giveaways addrole`");
+
+			// TODO: replace !giveaways addrole  (make !raffle addrole ?)
+			/*
+			let str = '';
+			let count = 0;
 			if (!parms) {
 				utils.chSend(message, 'Type `!giveaways list` to see what is available for winning a raffle. ' + 
 				  ' Items listed there will be options  you can pick if you win a standard raffle.' +
@@ -257,16 +265,87 @@ module.exports = {
 				}
 				utils.chSend(message, theStr);
 			}
+			*/
 		}
 	},
 	subCmd: {
+		remove: {
+			do: function(message, parms, gameStats) {
+				let str = "";
+				
+				// TODO: replace with access check someday
+				if (message.author.id !== cons.SPONGE_ID) {
+					utils.chSend(message, "Access denied.");
+					return;
+				}
+
+				let raffleId = parms;
+
+				if (raffleId === "" || typeof raffleId === "undefined") {
+					str += "Syntax: `!raffle remove <raffleId>`";
+				} else {
+					if (raffleData.hasOwnProperty(raffleId)) {
+						delete raffleData[raffleId];
+						str += `:open_mouth: Raffle with id \`${raffleId}\` removed!`;
+						utils.saveObj(raffleData, "raffle.json"); // write to disk
+					} else {
+						str += ":thinking: I don't see a raffle with that id. You could try `!list`.";
+					}
+				}
+				utils.chSend(message, str);
+			}
+		},
+		add: {
+			do: function(message, parms, gameStats) {
+				let str = "";
+				
+				// TODO: replace with access check someday
+				if (message.author.id !== cons.SPONGE_ID) {
+					utils.chSend(message, "Access denied.");
+					return;
+				}
+				
+				parms = parms.split(" ");
+				let when = parms[0];
+				parms.shift();
+				let raffleId = parms.join(" ");
+
+				if (when === "" || typeof when === "undefined") {
+					str += "Syntax: `!raffle add <timestamp> <raffleId>`";
+				} else {
+					let now = new Date().valueOf();
+					when = parseInt(when, 10);
+					if (when < now) {
+						str += `That raffle would take place in the past, try again. (${when} <= ${now})`;
+					} else {
+						if (raffleId === "" || typeof raffleId === "undefined") {
+							str += "No raffleId supplied. Syntax: `!raffle add <timestamp> <raffleId>";
+						} else {
+							let howSoon = utils.msToTime(when - now);
+							
+							if (raffleData.hasOwnProperty(raffleId)) {
+								str += `\nRaffle with id \`${raffleID}\` already existed, updating...\n`;
+							}
+							str += `Raffle \`${raffleId}\` will take place in: ${howSoon}!`;
+							
+							raffleData[raffleId] = {
+								"date": when
+							}
+
+							utils.saveObj(raffleData, "raffle.json"); // write to disk
+						}
+					}
+				}
+				utils.chSend(message, str);
+			}
+		},
 		ticket: {
 			do: function(message, parms, gameStats) {
-				// replace with access check someday
+				// TODO: replace with access check someday
 				if (message.author.id === cons.SPONGE_ID) {
-					var who;
-					var amt;
-					var str;
+					let who;
+					let amt;
+					let str;
 					if (!parms) {
 						utils.chSend(message, 'You forgot the target to for !ticket.');
 						return;
@@ -284,7 +363,7 @@ module.exports = {
 					if (parms[1] === '' || typeof parms[1] === 'undefined') {
 						amt = 1;
 					} else {
-						amt = parseInt(parms[1]);	
+						amt = parseInt(parms[1], 10);	
 					}
 					
 					str = who + ' now has ';
@@ -297,14 +376,14 @@ module.exports = {
 		},
 		next: {
 			do: function(message) {
-				var when = new Date(cons.NEXT_RAFFLE);
+				let when = new Date(cons.NEXT_RAFFLE);
 				utils.chSend(message, 'Next raffle is scheduled for: ' + when + ' , but' +
 				  ' this is subject to bugs, unexpected circumstances, and whimsy.');
 			}
 		},
 		hype: {
 			do: function(message) {
-				var when = new Date(cons.NEXT_RAFFLE);
+				let when = new Date(cons.NEXT_RAFFLE);
 				utils.chSend(message, 'The next raffle is on ' + when + '! Are you ready?!\n' +
 				  '(use !time to find out official server time)');
 			}
@@ -337,7 +416,7 @@ module.exports = {
 						if (!gameStats[who].raffle.hasOwnProperty('ticketCount')) {
 							utils.debugPrint('!raffle: ' + who + ' has .raffle but no .ticketCount');
 						} else {
-							var tCount = parseInt(gameStats[who].raffle.ticketCount);
+							var tCount = parseInt(gameStats[who].raffle.ticketCount, 10);
 							if (isNaN(tCount)) {
 								utils.debugPrint('WARNING: ' + who + '.raffle.ticketCount was NaN: ' + tCount);
 							} else if (tCount >= 1) {
@@ -439,11 +518,9 @@ module.exports = {
 			return;
 		}
 		
-		var sub = parms[0].toLowerCase(); // sub is the possible subcommand
+		let sub = parms[0].toLowerCase(); // sub is the possible subcommand
 		parms.shift(); // lop off the command that got us here
-		
-		
-		
+	
 		if (this.subCmd.hasOwnProperty(sub)) {
 			//we've found a found sub-command, so do it...
 			// our default behavior: again, lop off the subcommand,
