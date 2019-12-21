@@ -77,7 +77,13 @@ module.exports = {
 					if (!parms) {
 						
 						let guildQuotesArr = Object.entries(quotes[message.guild.id]);
-						//console.log(guildQuotesArr);
+						
+						if (guildQuotesArr.length === 0) {
+							utils.chSend(message, 'I have no quotes stored for this server.\n' +
+							  `React with ${cons.QUOTE_SAVE_EMO_TEXT} on a message in a channel I can see to save a quote.`);
+							return;
+						}
+						
 						who = guildQuotesArr[Math.floor(Math.random() * guildQuotesArr.length)][0];
 					} else {					
 						who = utils.makeId(parms);
@@ -98,7 +104,7 @@ module.exports = {
 						theStr += ` on: ${when} (added by **${addedBy.nick}**)`;
 						utils.chSend(message, theStr);
 					} else {
-						utils.chSend(message, ' No quotes found by ' + parms);
+						utils.chSend(message, `No quotes found by that user.`);
 					}							
 				}
 			},
@@ -131,7 +137,8 @@ module.exports = {
 		
 			parms = parms.split(' ');
 			if (parms[0] === '') {
-				utils.chSend(message, 'React with :record_button: to a message to add it the quotes databse! Or, type !quote random <user> to see a random quote from a user.');
+				utils.chSend(message, `React with ${cons.QUOTE_SAVE_EMO_TEXT} to a message to add it the quotes databse!` +
+				  '\nOr, type !quote random <user> to see a random quote from a user.');
 				return;
 			}
 			
