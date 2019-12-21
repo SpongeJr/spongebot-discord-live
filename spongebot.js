@@ -160,7 +160,7 @@ spongeBot.backup = {
 //-----------------------------------------------------------------------------
 spongeBot.quote = {
 	help: 'Add something a user said to the quotes database, hear a random quote, and more!',
-	longHelp: 'React with ' + cons.QUOTE_SAVE_EMO + ' to a message to add it the quotes databse!' +
+	longHelp: 'React with ' + cons.QUOTE_SAVE_EMO_TEXT + ' to a message to add it the quotes databse!' +
 	  ' Or, type `!quote random <user>` to see a random quote from a user.',
 	do: function(message, parms) {		
 		quotes.q.do(message, parms, BOT, gameStats);
@@ -180,10 +180,12 @@ const commandList = {
 	"pointsrace": {moduleName: "khangames", disabled: false },
 	"points": {moduleName: "khangames", disabled: false },
 	"tubesubs": { moduleName: "youtube" },
+	"addevent": { moduleName: "timey" },
+	"setevent": { moduleName: "timey" }
 }
 
 for (let cmd in commandList) {
-	spongeBot[cmd] = new Command(cmd, commandList[cmd], MODULES);
+	spongeBot[cmd] = new Command(cmd, commandList[cmd], MODULES, BOT);
 }
 
 spongeBot.subscribe = new Command(
@@ -1345,7 +1347,7 @@ BOT.on('presenceUpdate', (oldMemb, newMemb) => {
 });
 BOT.on('messageReactionAdd', (react, whoAdded) => {
 
-	if (react.emoji.identifier === cons.QUOTE_SAVE_EMO) {
+	if (react.emoji.identifier === cons.QUOTE_SAVE_EMO_UNI) {
 		//utils.chSend(react.message, 'I\'m sorry, I\'m afraid I can\'t do that for you.');
 		quotes.q.addByReact(react, whoAdded, BOT);
 	}
@@ -1396,7 +1398,7 @@ BOT.on('message', message => {
 							debugPrint('!!! WARNING:  BOT.on(): missing .do() on ' + theCmd +
 							  ', ignoring user command !' + theCmd);
 						} else {
-							spongeBot[theCmd].do(message, parms, gameStats, bankroll);
+							spongeBot[theCmd].do(message, parms, gameStats, bankroll, BOT);
 						}
 					}
 				}
