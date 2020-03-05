@@ -5,41 +5,97 @@ const cons = require('../lib/constants.js');
 const FRUIT_VAL = 300;
 const utils = require('../lib/utils.js');
 const treefile = require('../' + cons.DATA_DIR + cons.LOOTTREE_FILE);
-var treesLoaded = false;
+let treesLoaded = false;
 
 //-----------------------------------------------------------------------------
 /* tree.config: {
+		colorList, flavorList: [] Arrays of strings like "blue" or "striped"
 		treeVal: how many credits are awarded upon harvesting,
 		ticketRarity: how rare (really) tickets are, as in 1 in this value chance
 		magicSeedRarity: how rare seeds are, as above (1000 means 1/1000 chance)
 		harvestMessages: [] Array of strings of things that might be said during harvesting
 */
 //-----------------------------------------------------------------------------
-var Fruit = function(stats) {
+
+const Fruit = function(stats) {
 	this.stats = stats || {};
 	this.stats.ripeness = stats.ripeness || 0;
 	this.stats.name = stats.name || ':seedling: budding';
 	this.stats.valueMult = stats.valueMult || 0;
 	this.stats.special = {},
-	this.stats.color = utils.listPick(['striped','spotted','plain', 'shiny', 'dull', 'dark', 'light', 'bright', 'mottled']) +
-	  ' ' + utils.listPick(['red','orange','yellow','green','blue','indigo','golden','silver']);
+	this.stats.id = stats.id || {
+		color: Math.floor(Math.random() * tree.config.colorList.length),
+		flavor: Math.floor(Math.random() * tree.config.flavorList.length),
+	},
+	this.stats.description = tree.config.colorList[this.stats.id.color] +
+	  " " + tree.config.flavorList[this.stats.id.flavor];
+};
+Fruit.prototype.squish = function(allFruit, storedSlot) {
+	// allFruit is the entire tree.trees[who] object (i.e., .stored and .tree both)
+	// storedSlot is which slot in the .stored this fruit is
+	// returns object with a success Boolean and a message
+	// it's all kind of a mess and probably needs refactored
+	let success;
+	let outP = "";
+	
+	let squished = allFruit.stored.splice(storedSlot, 1)[0];
+	success = true;
+	outP += `You squish your stored ${squished.stats.description} fruit.`;
+	outP += "\nYou now have one more slot free for storing loot fruit.";
+	return { "success": success, "message": outP };
+};
+Fruit.prototype.keep = function(allFruit, treeSlot) {
+	// allFruit is the entire tree.trees[who] object (i.e., .stored and .tree both)
+	// treeSlot is which slot in the .tree this fruit is
+	// returns object with a success Boolean and a message
+	// it's all kind of a mess and probably needs refactored
+	
+	let success;
+	let outP = "";
+	let maxKeep = tree.config.maxKeep; // maybe later varies by user
+	
+	if (allFruit.stored.length >= maxKeep) {
+		success = false;
+		outP += `Sorry, the max stored fruit is ${maxKeep}! You'll have to do something about that first.`;
+	} else {
+		
+		if (this.stats.ripeness > 0.8 && this.stats.ripeness <= 1.3) {
+			success = true;
+			let thisFruit = allFruit.tree.splice(treeSlot, 1)[0];
+			allFruit.stored.push(thisFruit);
+			outP += "Okay, done!";
+		} else {
+			success = false;
+			outP += "Sorry, you may only `keep` ripe fruit.";
+		}
+	}
+	return {"success": success, "message": outP};
 };
 Fruit.prototype.pick = function() {
 	// returns object with a message and a value to add to bank
 	let outP = '';
 	let totValue = 0;
 	
+	// TODO: Replace with squishChance constant or something, and rethink
+	// since squish mechanic may be desired in Fruit.keep() also
+	// Squish mechanic disabled for now.
+	/*
 	if (Math.random() < 0.08) {
 		outP += this.stats.name + ' loot fruit got squished! ';
 		this.stats.name = ':grapes: a squished';
 		this.stats.valueMult = 0;
 	}
+	*/
 	
 	totValue = FRUIT_VAL * this.stats.valueMult;
 	
 	outP += this.stats.name + ' loot fruit was picked for ' + FRUIT_VAL +
 	  ' x ' + (this.stats.valueMult * 100) + '% = ' + totValue;
 		
+	// start a new fruit for them, up to 4% ripe
+	// not really ideal doing it here and like this
+	// we maybe need a fruit.respawn()
+	// also might have replanting of trees, idk
 	this.stats.ripeness = Math.random() * 0.04;
 	this.stats.name = ':seedling: budding';
 	this.stats.valueMult = 0;
@@ -49,14 +105,15 @@ Fruit.prototype.pick = function() {
 Fruit.prototype.age = function() {
 	this.stats.ripeness = parseFloat(this.stats.ripeness + Math.random() * 0.4);
 	
-	 if (this.stats.ripeness > 1.3) {
+	// TODO: replace magic numbers here with constants
+	if (this.stats.ripeness > 1.3) {
 		this.stats.name = ':nauseated_face: rotten';
 		this.stats.valueMult = 0;
 	} else if (this.stats.ripeness > 1.1 && this.stats.ripeness <= 1.3) {
 		this.stats.valueMult = 0.8;
-		this.stats.name = ':eggplant: very ripe';
+		this.stats.name = ':moneybag: very ripe';
 	} else if (this.stats.ripeness > 0.8 && this.stats.ripeness <= 1.1) {
-		this.stats.name = ':eggplant: perfectly ripe';
+		this.stats.name = ':moneybag: perfectly ripe';
 		this.stats.valueMult = 1;
 	} else if (this.stats.ripeness > 0.4 && this.stats.ripeness <= 0.8) {
 		this.stats.name = ':pineapple: unripe';
@@ -69,20 +126,39 @@ Fruit.prototype.age = function() {
 const loadTrees = function() {
 	// Take the trees loaded in from disk and creates new Fruit as needed for them
 
-	for (var whoseTree in tree.trees) {
-		var allFruit = tree.trees[whoseTree];
-		for (var i = 0; i < allFruit.length; i++) {	
-			let newFruit = new Fruit(allFruit[i].stats);
-			allFruit[i] = newFruit;
+	for (let whoseTree in tree.trees) {
+		let allFruit = tree.trees[whoseTree];
+		
+		// TEMPORARY FILE FORMAT UPDATE BOOTSTRAP CODE
+		/*
+		if (Array.isArray(allFruit)) {
+			// old file format, so we need to update...
+			let newAllFruit = {"tree": [], "stored": []};
+			for (let i = 0; i < allFruit.length; i++) {
+				newAllFruit.tree.push(allFruit[i]);
+			}
+			tree.trees[whoseTree] = newAllFruit;
+			allFruit = tree.trees[whoseTree];
+		}
+		*/
+		
+		// where = "tree", "stored", etc.
+		for (let where in allFruit) {
+			for (let i = 0; i < allFruit[where].length; i++) {				
+				tree.trees[whoseTree][where][i] = new Fruit(allFruit[where][i].stats);
+			}
 		}
 	}
 	treesLoaded = true;
 };
-var tree = {
+const tree = {
 	config: {
+		colorList: ['striped','spotted','plain', 'shiny', 'dull', 'dark', 'light', 'bright', 'mottled'],
+		flavorList: ['red','orange','yellow','green','blue','indigo','golden','silver'],
 		treeVal: 3500,
 		ticketRarity: 12,
 		magicSeedRarity: 8,
+		maxKeep: 3,
 		harvestMessages: ['','','','Wow, can I get a loan?','You might need some help carrying all that!','Nice haul!','Enjoy your goodies!',
 		  'Cha-CHING!','Woot! Loot!','Looks like about tree fiddy to me.','Don\'t you wish loot trees were real?',
 		  'Thanks for participating on the server!','Don\'t spend it all on the `!slots`!',':treasure:',':coin: :coin: :coin:',
@@ -132,7 +208,6 @@ module.exports = {
 					'about ' + percentGrown.toFixed(1) + '% grown. It ought to be fully grown' +
 					' in about ' + utils.msToTime(nextCol - now));
 				}
-
 			},
 		},
 		harvest: {
@@ -203,6 +278,9 @@ module.exports = {
 					sayings = JSON.parse(sayings);
 					messStr += utils.listPick(sayings);
 					
+					messStr += "\n:warning: Tree harvesting will soon be replaced by the updated loot fruit game!\n";
+					messStr += ":warning: Please stay tuned for updates!";
+					
 					utils.chSend(message, messStr);
 					
 					//magic seeds ... (do nothing right now unfortunately) =(
@@ -227,29 +305,37 @@ module.exports = {
 		fruit: {
 			do: function(message, parms, gameStats, bankroll) {
 				
-				var who = message.author.id;
+				let who = message.author.id;
 				if (tree.trees.hasOwnProperty(who)) {
-					var fruit = tree.trees[who];
+					let fruit = tree.trees[who];
 					
 					// show each fruit's stats
-					var fruitMess = '``` Loot fruit status for '+ message.author.username +': ```\n';
-					for (var i = 0; i < fruit.length; i++) {	
-						fruitMess += fruit[i].stats.name + ' ' + fruit[i].stats.color +
-						  ' loot fruit   Ripeness: ' + (fruit[i].stats.ripeness * 100).toFixed(1) + '%';
-						if (fruit[i].stats.health) {
-							fruitMess += ' (thriving!)';
+					let fruitMess = '``` Loot fruit status for '+ message.author.username +': ```\n';
+					
+					for (let where in fruit) {
+						fruitMess += `\n**Location: _${where}_**\n`;
+						let theseFruits = fruit[where];
+						for (let i = 0; i < theseFruits.length; i++) {
+							fruitMess += `\`${i + 1}\``.padStart(3) + ": ";
+							fruitMess += `${theseFruits[i].stats.name} ${theseFruits[i].stats.description}` +
+							  `(${theseFruits[i].stats.id.color}, ${theseFruits[i].stats.id.flavor})` + 
+							  ` loot fruit   Ripeness: ${(theseFruits[i].stats.ripeness * 100).toFixed(1)} %`;
+							if (theseFruits[i].stats.health) {
+								fruitMess += ' (thriving!)';
+							}
+							fruitMess += '\n';
 						}
-						fruitMess += '\n';
 					}
+					
 					utils.chSend(message, fruitMess);
 				} else {
 					utils.chSend(message, 'I see no fruit for you to check, ' + message.author +
 					  '\nI\'ll give you three starter fruit. You can !tree tend or !tree pick them' +
 					  ' at any time, for now.');
-					tree.trees[who] = [];
-					tree.trees[who].push(new Fruit({}));
-					tree.trees[who].push(new Fruit({}));
-					tree.trees[who].push(new Fruit({}));
+					tree.trees[who] = { "tree": {}, "stored": {} };
+					tree.trees[who].tree.push(new Fruit({}));
+					tree.trees[who].tree.push(new Fruit({}));
+					tree.trees[who].tree.push(new Fruit({}));
 				}
 			}
 		},
@@ -257,22 +343,24 @@ module.exports = {
 			do: function(message, parms, gameStats, bankroll) {
 				let timers = module.exports.timers;				
 				let who = message.author.id;
+				let fruitMess = "";
 				if (tree.trees.hasOwnProperty(who)) {
 					
 					if (!utils.collectTimer(message, who, 'tree-tend', timers.tend, gameStats)) {
 						return;
 					}
 					
-					let fruit = tree.trees[who];
+					let fruit = tree.trees[who].tree;
 					// tend to each Fruit
-					let fruitMess = '``` Loot fruit status for '+ message.author.username +': ```\n';
+					fruitMess += "You decide to use magic to try to ripen all of your trees loot fruit at once.\n"
+					fruitMess += '``` Loot fruit status for '+ message.author.username +': ```\n';
 					for (let i = 0; i < fruit.length; i++) {
+
 						let ageIt = (Math.random() < 0.67); // 67% per fruit chance of aging
 						if (ageIt) {
 							fruit[i].age();
 						}
-							
-						fruitMess += fruit[i].stats.name + ' ' + fruit[i].stats.color +
+						fruitMess += fruit[i].stats.name + ' ' + fruit[i].stats.description +
 						  ' loot fruit   Ripeness: ' + (fruit[i].stats.ripeness * 100).toFixed(1) + '%';
 						if (ageIt) {
 							fruitMess += ' (tended)';
@@ -291,17 +379,18 @@ module.exports = {
 		pick: {
 			do: function(message, parms, gameStats, bankroll) {
 				let timers = module.exports.timers;
-				var pickMess;
+				let pickMess = "";
 				let who = message.author.id;
 				if (tree.trees.hasOwnProperty(who)) {
 					if (!utils.collectTimer(message, who, 'tree-pick', timers.pick, gameStats)) {
 						return;
 					}
 				
-					let fruit = tree.trees[who];
+					let fruit = tree.trees[who].tree;
 				
 					// .pick() each Fruit
-					pickMess = '```Loot Fruit pick results for '+ message.author.username +': ```\n ';
+					pickMess += "You decide to pick all of your loot fruit and let it turn to loot in yours hands.\n"
+					pickMess += '```Loot Fruit pick results for '+ message.author.username +': ```\n ';
 					var totalFruitVal = 0;
 					for (let i = 0; i < fruit.length; i++) {
 						let pickResult = fruit[i].pick();
@@ -309,12 +398,91 @@ module.exports = {
 						pickMess += pickResult.message + '\n';
 					}
 				} else {
-					pickMess = 'Nothing to pick... you need to do `!tree fruit` first.';
+					utils.chSend(message, 'You have no trees! Try doing `tree fruit` first.');
 					return;
 				}
 				pickMess += '\n **TOTAL LOOT FRUIT VALUE**: ' + totalFruitVal + ' (added to your bank)';
+				pickMess += '\n\n :information_source: TIP: You can ~~now~~ (soon) save fruit with `tree keep <#>`!';
+				pickMess += 'Try to make a matched set of 3 of the same type or color of fruit! ';
 				utils.addBank(who, totalFruitVal, bankroll);
 				utils.chSend(message, pickMess);
+			}
+		},
+		keep: {
+			do: function(message, parms, gameStats, bankroll) {
+				let who = message.author.id;
+				let mess = "";
+				let fruitChoice = parseInt(parms, 10);
+				
+				if (!tree.trees.hasOwnProperty(who)) {
+					utils.chSend(message, 'You have no trees! Try doing `tree fruit` first.');
+					return;
+				} else {
+					let unpickedFruit = tree.trees[who].tree;
+					
+					if (!Array.isArray(unpickedFruit)) {
+						console.log(`!tree keep: WARNING! tree.trees.${who}. did not have a tree[] array!`);
+						utils.chSend(message, "Something seems to be seriously wrong with your loot fruit trees!");
+						return;
+					}
+
+					if (fruitChoice < 1 || isNaN(fruitChoice) || fruitChoice > unpickedFruit.length) {
+						utils.chSend(message, "Invalid fruit number. You can do `tree fruit` first to list them.");
+						return;
+					}
+					
+					if (typeof unpickedFruit[fruitChoice - 1] === "undefined") {
+						utils.chSend(message, "Something seems to be seriously wrong with that loot fruit!");
+						return;
+					}
+					let keepResult = unpickedFruit[fruitChoice - 1].keep(tree.trees[who], fruitChoice - 1);
+					// later, we may want to handle these differently...
+					if (keepResult.success) {
+						mess += keepResult.message;
+					} else {
+						mess += keepResult.message;
+					}
+				}
+				utils.chSend(message, mess);
+			}
+		},
+		squish: {
+			do: function(message, parms, gameStats, bankroll) {
+				let who = message.author.id;
+				let mess = "";
+				let fruitChoice = parseInt(parms, 10);
+				
+				if (!tree.trees.hasOwnProperty(who)) {
+					utils.chSend(message, 'You have no trees! Try doing `tree fruit` first.');
+					return;
+				} else {
+					let storedFruit = tree.trees[who].stored;
+					
+					if (!Array.isArray(storedFruit)) {
+						console.log(`!tree keep: WARNING! tree.trees.${who}. did not have a stored[] array!`);
+						utils.chSend(message, "Something seems to be seriously wrong with your loot fruit trees!");
+						return;
+					}
+
+					if (fruitChoice < 1 || isNaN(fruitChoice) || fruitChoice > storedFruit.length) {
+						utils.chSend(message, "Invalid stored fruit number. You can do `tree fruit` first to list them.");
+						return;
+					}
+					
+					if (typeof storedFruit[fruitChoice - 1] === "undefined") {
+						utils.chSend(message, "Something seems to be seriously wrong with that loot fruit!");
+						return;
+					}
+					let squishResult = storedFruit[fruitChoice - 1].squish(tree.trees[who], fruitChoice - 1);
+					// later, we may want to handle these differently...
+					if (squishResult.success) {
+						mess += squishResult.message;
+					} else {
+						mess += squishResult.message;
+					}
+					
+					utils.chSend(message, mess);
+				}
 			}
 		}
 	},
