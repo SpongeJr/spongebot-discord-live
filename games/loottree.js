@@ -773,6 +773,7 @@ module.exports = {
 							outStr += theGroup.text.wishGranted(userLang, theGroup);
 							// make the wish come true! (someday)
 							// theGroup.grantWish("seeds"); // maybe
+							clearTimeout(v.wishingWell.groups[msgGuildId].timer);
 							delete v.wishingWell.groups[msgGuildId];
 						}
 					} else {
