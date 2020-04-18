@@ -98,7 +98,7 @@ module.exports = {
 			var timeElapsed = utils.msToTime(Math.abs(parseInt(args[0]) - parseInt(args[1])));
 			return timeElapsed;
 		}
-		
+		/*
 		if ((timeCmd === 'nextWeek') || (timeCmd === 'nextDay')) {
 			// <time> tells how long from now until <time + (1 day | 1 week)> or if it's already passed
 			let howMuch;
@@ -108,6 +108,38 @@ module.exports = {
 				return 'That was ' + utils.msToTime(Math.abs(when)) + ' ago';
 			} else {
 				return 'Coming up in ' + utils.msToTime(when);
+			}
+		}
+		*/
+		if (timeCmd === 'whenis') {
+			// tries to make a new Date object with the rest of the command line
+			// outputs:
+			//	- The date again, in ISO format
+			//	- The date in raw format (milliseconds)
+			//	- How long until that date in milliseconds
+			//	- How long until that date word form (msToTime)
+			
+			// Other possible arguments / improvements:
+			// 	- one week for one week from now, one day, etc.
+			//	- a whole date language parser? (!time whenis 3 months 2 weeks 1 day 8 hours 3 seconds)
+			
+			/*
+					ISO STRING (RAW 23478923789 ms)
+					"is coming up in / was X ago" (msToTime)  (RAW 234789 ms)
+			*/
+			
+			let then = new Date(when);
+			if (isNaN(then.valueOf())) {
+				return;
+			} else {
+				let now = new Date().valueOf();
+				let outStr = "";
+				let diffRaw = Math.abs(then - now);
+				let diffStr = utils.msToTime(diffRaw);
+				outStr += `\n${then.toISOString()} | RAW: ${then.valueOf()} ms\n`;
+				outStr += (then < now) ? `was ${diffStr} ago` : `Coming up in ${diffStr}`;
+				outStr += ` | RAW: ${diffRaw}`;
+				return outStr;
 			}
 		}
 	},
@@ -131,7 +163,7 @@ module.exports = {
 			subCmd: {},
 			help: "Setup an event.",
 			longHelp: "Setup an event. Syntax: setevent <property> <value>\nUse `addevent` to save." +
-			  "\n addevent <property> with no value specified queries a property.",
+			  "\n setevent <property> with no value specified queries a property.",
 			do: function(message, args, gameStats, bankroll, BOT) {
 				let userId = message.author.id;
 				let outP = "";
@@ -219,7 +251,7 @@ module.exports = {
 							outP += `-- timey.init(): Event announceTime for "${thisEvent.eventName}" ` +
 							  `is in the past! Announcing immediately! announceTime: ${thisEvent.announceTime}; now: ${Date.now()}`;
 						} else {
-							outP += `Event \`${title}\`has been added... hopefully!`;
+							outP += `Event \`${title}\` has been added... hopefully!`;
 						}
 					} else {
 						outP += "\nEvent not saved, there were errors.";

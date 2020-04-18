@@ -33,9 +33,16 @@ module.exports = {
 				"id": idAdded,
 				"nick": userAdded.username
 			});
-	
-			if (!quotes[message.guild.id]) {
-				quotes[message.guild.id] = {};
+			
+			console.log("-- we're in q.addByReact");
+			
+			if (!message.guild) {
+				utils.chSend(message, "You can't add quotes from DM. Try reacting to a message in a public channel.");
+				return;
+			}
+			
+			if (!quotes[message.guild]) {
+				quotes[message.guild] = {};
 			}
 				
 			quotesBySameUser = quotes[message.guild.id][whoSaid.id];

@@ -14,6 +14,10 @@ const sitePoller = function(site, BOT) {
 	  let overflow = latestFeed.items.length - latestItems.length;
 	  let newItems = 0;
 	  let announceStr = "";
+	  let options = {
+		  "showPostDate": false,
+		  "showLinkPreview": true
+	  }
 	  
 	  latestItems.forEach((item) => {
 		  // compare each with stored
@@ -32,7 +36,19 @@ const sitePoller = function(site, BOT) {
 		if (!found) {
 			// new item! Add to announce string.
 			newItems++;	
-			let blurb = `**${item.title}** (Posted: ${item.isoDate})\nLink: \`${item.link}\`\n`;
+			let blurb = `**${item.title}**`;
+			
+			if (options.showPostDate) {
+				blurb += ` (Posted: ${item.isoDate})`
+			}
+			
+			if (options.showLinkPreview) {
+				blurb += `\n${item.link}`;
+			} else {
+				blurb += ` (\nLink: \`${item.link}\`)`;
+			}
+			
+			blurb += "\n";
 			announceStr += blurb;
 		} else {
 			//console.log(`Item link ${item.link} was not new.`);
@@ -47,11 +63,11 @@ const sitePoller = function(site, BOT) {
 		  // 2K char limit handling
 		  if (announceStr.length > 1850) {
 			announceStr = announceStr.slice(0, 1850);
-			announceStr += ` ... [TRUNCATED] `;
+			announceStr += "` ... [TRUNCATED] `";
 		  }
 
 		  if (overflow > 0) {
-			  announceStr += `... and also ${overflow} other items not listed.`;
+			  //announceStr += `... and also ${overflow} other items not listed.`;
 		  }
 		  rssConfig.sites[site].channels.forEach((chanId) => {
 			BOT.channels.get(chanId).send(announceStr);

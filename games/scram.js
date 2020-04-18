@@ -1,17 +1,19 @@
 const cons = require('../lib/constants.js');
 const utils = require('../lib/utils.js');
-var scram = {};
-var scramWordLists = {
+const i18n = require('../modules/i18n.js');
+
+let scram = {};
+let scramWordLists = {
 	"278588293321326594": cons.ESO_SCRAMWORDS,
 	"402126095056633859": cons.PLANET_SCRAMWORDS
 };
 
-var scramConfigs = {
+let scramConfigs = {
 	"default": {
 		wordDelay: 105000,
 		wordDelayVariation: 15000,
 		baseAward: 600,
-		letterBounus: 100, 
+		letterBounus: 100,
 		guessTime: 29000,
 		extraGuessTime: 2500,
 		maxMultiplier: 2,
@@ -39,11 +41,11 @@ var scramConfigs = {
 	}
 };
 //-----------------------------------------------------------------------------
-var scrambler = function(inputWord) {
-	var wordArray = inputWord.split("");
-	var newWord = '';
+const scrambler = function(inputWord) {
+	let wordArray = inputWord.split("");
+	let newWord = '';
 
-	var letter = 0;
+	let letter = 0;
 	while (wordArray.length > 0 ) {
 		newWord += wordArray.splice(Math.random() * wordArray.length, 1);
 		letter++;
@@ -54,81 +56,89 @@ var scrambler = function(inputWord) {
 module.exports = {
 	subCmd: {
 		loadconfig: {
-			do: function(message, parms) {
-				var server = message.guild;
-				var outStr = '';
-				var configs = Object.keys(scramConfigs);
+			do: function(message, parms, gameStats) {
+				let who = message.author.id;
+				let server = message.guild;
+				let userLang = utils.getStat(who, "i18n", "language", gameStats);
+				let outStr = '';
+				let configs = Object.keys(scramConfigs);
 				if (configs.includes(parms[1])) {
 					scram[server.id].currentConfig = parms[1];
-					outStr += ' Config successfully changed to: ' + parms[1];
+					//outStr += ' Config successfully changed to: ' + parms[1];
+					outStr += i18n.st(["scram", "configChangeOk"], userLang, [parms[1]]);
 				} else {
-					outStr += ` I see no scram config called ${parms[1]} here!`;
+					//outStr += ` I see no scram config called ${parms[1]} here!`;
+					outStr += i18n.st(["scram", "configChangeNotExist"], userLang, [parms[1]]);
 				}
 				utils.chSend(message, outStr);
 			}
 		},
 		saveconfig: {
-			do: function(message, parms) {
-				var server = message.guild;
-				var outStr = 'You find yourself unable to do that at this time. Strange.';
+			do: function(message, parms, gameStats) {
+				let server = message.guild;
+				let outStr = 'You find yourself unable to do that at this time. Strange.';
 				utils.chSend(message, outStr);
 			}
 		},
 		oldtop: {
 			do: function(message, parms, gameStats) {
+				let who = message.author.id;
+				let userLang = utils.getStat(who, "i18n", "language", gameStats);
 				let scramStats = {};
 				let outStr = '';
 				let topWins = [];
 				let fastest = [];
-				
+
 				// build scramStats from gameStats
 				for (let who in gameStats) {
 					let game = 'scram';
-					for (let stat in gameStats[who][game]) {	
+					for (let stat in gameStats[who][game]) {
 						if (!scramStats.hasOwnProperty(stat)) {
 							scramStats[stat] = {};
 						}
 						scramStats[stat][who] = gameStats[who][game][stat];
 					}
 				}
-				
+
 				// build arrays and sort
 				for (let who in scramStats.wins) {
 					topWins.push( {"who": who, "wins": scramStats.wins[who]} );
 					fastest.push( {"who": who, "speed": scramStats.fastest[who]} );
 				}
-				
+
 				topWins.sort(utils.objSort("wins", -1));
 				fastest.sort(utils.objSort("speed"));
 
 				// output top 10
 				let topNick = utils.idToNick(topWins[0].who, gameStats);
-				outStr += '```TOP 10 DESCRAMBLERS:\n';
-				outStr += ` !SCRAM MASTER:  ->  ${topNick}  <-  with ${topWins[0].wins} wins! \n`;
+				//outStr += '```TOP 10 DESCRAMBLERS:\n';
+				outStr += "```";
+				outStr += i18n.st(["scram", "top10global"], userLang, [topNick, topWins[0].wins]);
+				//outStr += ` !SCRAM MASTER:  ->  ${topNick}  <-  with ${topWins[0].wins} wins! \n`;
 				for (let num = 1; (num < 10 && num < topWins.length); num++) {
 					let nick = utils.idToNick(topWins[num].who, gameStats);
 					outStr += ` #${num + 1}: (${topWins[num].wins}) ... ${nick} \n`;
 				}
-				
+
 				// output top 10 fastest
 				let fastestNick = utils.idToNick(fastest[0].who, gameStats);
 				let speed = fastest[0].speed / 1000;
-				outStr += '---\nFASTEST DESCRAMBLERS:\n';
-				outStr += `SUPERSONIC SCRAM CHAMP:  ->  ${fastestNick}  <-  in ${speed.toFixed(3)} seconds! \n`;
+				outStr += "---\n";
+				outStr += i18n.st(["scram", "top10globalFastest"], userLang, [fastestNick, speed.toFixed(3)]);
+				//outStr += `SUPERSONIC SCRAM CHAMP:  ->  ${fastestNick}  <-  in ${speed.toFixed(3)} seconds! \n`;
 				for (let num = 1; (num < 10 && num < fastest.length); num++) {
 					let nick = utils.idToNick(fastest[num].who, gameStats);
 					speed = fastest[num].speed / 1000;
 					outStr += ` #${num + 1}: (${speed.toFixed(3)} s) ... ${nick} \n`;
 				}
-					
 				outStr += '```';
-					  
 				utils.chSend(message, outStr);
-		
 			}
 		},
 		top: {
-				do: function(message, parms, gameStats) {
+			do: function(message, parms, gameStats) {
+				let who = message.author.id;
+				let userLang = utils.getStat(who, "i18n", "language", gameStats);
 				let scramStats = {};
 				let scramServerStats = {};
 				let outStr = '';
@@ -137,11 +147,11 @@ module.exports = {
 				let serverTopWins = [];
 				let serverFastest = [];
 				let thisServer = message.guild;
-				
+
 				// build scramStats and scramServerStats from gameStats
 				for (let who in gameStats) {
 					let game = 'scram';
-					for (let stat in gameStats[who][game]) {	
+					for (let stat in gameStats[who][game]) {
 						if (!scramStats.hasOwnProperty(stat)) {
 							scramStats[stat] = {};
 						}
@@ -157,13 +167,13 @@ module.exports = {
 						}
 					}
 				}
-				
+
 				// build arrays and sort
 				for (let who in scramStats.wins) {
 					topWins.push( {"who": who, "wins": scramStats.wins[who]} );
 					fastest.push( {"who": who, "speed": scramStats.fastest[who]} );
 				}
-				
+
 				// build per-server arrays and sort
 				for (let who in scramServerStats[thisServer.id]) {
 					serverTopWins.push( {
@@ -176,123 +186,152 @@ module.exports = {
 						"speed": scramServerStats[thisServer.id][who].fastest
 					});
 				}
-		
+
 				topWins.sort(utils.objSort("wins", -1));
 				fastest.sort(utils.objSort("speed"));
 
 				serverTopWins.sort(utils.objSort("wins", -1));
 				serverFastest.sort(utils.objSort("speed"));
 
-				
-				// output top 10 for THIS SERVER				
+				// output top 10 for THIS SERVER
 				if (serverTopWins.length > 0) {
 					let serverTopNick = utils.idToNick(serverTopWins[0].who, gameStats);
-					outStr += '```TOP 10 DESCRAMBLERS on ' + thisServer.name + ':\n';
+					outStr += "```";
+					outStr += i18n.st(["scram", "top10server"], userLang, [thisServer.name, serverTopNick, serverTopWins[0].wins]);
+					/* outStr += '```TOP 10 DESCRAMBLERS on ' + thisServer.name + ':\n';
 					outStr += ` !SCRAM MASTER:  ->  ${serverTopNick}  <-  with ${serverTopWins[0].wins} wins! \n`;
+					*/
 					for (let num = 1; (num < 10 && num < serverTopWins.length); num++) {
 						let nick = utils.idToNick(serverTopWins[num].who, gameStats);
 						outStr += ` #${num + 1}: (${serverTopWins[num].wins}) ... ${nick} \n`;
 					}
 				}
-				
+
 				// output top 10 fastest for THIS SERVER
 				if (serverFastest.length > 0) {
 					let serverFastestNick = utils.idToNick(serverFastest[0].who, gameStats);
 					let speed = serverFastest[0].speed / 1000;
+					outStr += "---\n";
+					outStr += i18n.st(["scram", "top10serverFastest"], userLang, [thisServer.name, serverFastestNick, speed.toFixed(3)]);
+					/*
 					outStr += '---\nFASTEST DESCRAMBLERS on ' + thisServer.name + ':\n';
 					outStr += `SUPERSONIC SCRAM CHAMP:  ->  ${serverFastestNick}  <-  in ${speed.toFixed(3)} seconds! \n`;
+					*/
 					for (let num = 1; (num < 10 && num < serverFastest.length); num++) {
 						let nick = utils.idToNick(serverFastest[num].who, gameStats);
 						speed = serverFastest[num].speed / 1000;
 						outStr += ` #${num + 1}: (${speed.toFixed(3)} s) ... ${nick} \n`;
-					}				
+					}
 				}
-
-				outStr += '```';					  
+				outStr += '```';
 				utils.chSend(message, outStr);
 			}
 		}
 	},
 	s: {
 		do: function(message, parms, gameStats, bankroll) {
-			var server = message.guild;
-			var theWord;
-			var minMultiplier;
-			var maxMultiplier;
+			let who = message.author.id;
+			let server = message.guild;
+			let userLang = utils.getStat(who, "i18n", "language", gameStats);
+			let theWord;
+			let minMultiplier;
+			let maxMultiplier;
 
 			if (!server) {
-				utils.auSend(message, 'The word scramble game is meant to be played in public, and '+
-				'not direct messages. Sorry! It\'s more fun with others, anyway!');
+				utils.auSend(message, i18n.st(["scram", "noDMplay"], userLang));
 				return;
 			}
 
 			parms = parms.toLowerCase();
-			
+
 			if (!scram.hasOwnProperty(server.id)) {
 				utils.debugPrint('!s: No key ' + server.id + ' in scram variable! Someone probably ran !s before !scram.');
-				utils.chSend(message, 'Please start `!scram` before guessing a scrambled word.');
+				utils.chSend(message, i18n.st(["scram", "startScramFirst"], userLang));
+				//utils.chSend(message, 'Please start `!scram` before guessing a scrambled word.');
 				return;
 			}
-			
+
 			if (!scram[server.id].hasOwnProperty('runState')) {
-				utils.debugPrint('!s: No key .runState in scram.' + server.id + ' Maybe someone ran !s before !scram.');
-				utils.chSend(message, 'Please start `!scram` before guessing a scrambled word.');
+				utils.debugPrint(`!s: No key .runState in scram.${server.id} - Maybe someone ran !s before !scram.`);
+				utils.chSend(message, i18n.st(["scram", "startScramFirst"], userLang));
 				return;
 			}
-			
+
 			if (scram[server.id].runState !== 'guessing') {
-				utils.chSend(message, 'You can\'t guess the scrambled word now! ' +
+				utils.chSend(message, i18n.st(["scram", "cantGuessNow"], userLang));
+				/*utils.chSend(message, 'You can\'t guess the scrambled word now! ' +
 				  'You need to wait for a new word to unscramble!');
+				*/
 				return;
 			}
-			
+
 			theWord = scram[server.id].word;
 			minMultiplier = scramConfigs[scram[server.id].currentConfig].minMultiplier;
 			maxMultiplier = scramConfigs[scram[server.id].currentConfig].maxMultiplier;
-			
-			if (parms === theWord) {
-				
-				clearTimeout(scram[server.id].guessTimer);
-				
-				var user = message.author;
-				var who = message.author.id;
-				scram[server.id].runState = 'gameover';
-				var outStr = `:tada: **${user.username}** just unscrambled the word in `;
-				var now = new Date();
-				var speed = now - scram[server.id].guessStartTime;
-				var fastest = utils.getStat(who, 'scram', 'fastest', gameStats) || 0;
-				var serverStats = utils.getStat(who, 'scram', server.id, gameStats) || {"wins": 0, "fastest": 0};
-				var serverFastest = serverStats.fastest;
-				var serverWins = serverStats.wins;
-				
-				outStr += (speed / 1000).toFixed(1) + ' seconds and wins ';
-				var guessTime = scramConfigs[scram[server.id].currentConfig].guessTime + scramConfigs[scram[server.id].currentConfig].extraGuessTime * theWord.length; // max allowed time
-				var multiplier = 1 - speed / guessTime;
-				multiplier = (multiplier * (scramConfigs[scram[server.id].currentConfig].maxMultiplier - scramConfigs[scram[server.id].currentConfig].minMultiplier) + minMultiplier);
-				var baseAward = scramConfigs[scram[server.id].currentConfig].baseAward + scramConfigs[scram[server.id].currentConfig].letterBounus * theWord.length;
-				var award = Math.round(baseAward * multiplier);
 
-				outStr +=  `${award} credits! ( ${baseAward} x ~${multiplier.toFixed(2)} speed multiplier )`;
-				outStr += '\n The word was: ' + theWord;
+			if (parms === theWord) {
+
+				clearTimeout(scram[server.id].guessTimer);
+
+				let user = message.author;
+				let who = message.author.id;
+				scram[server.id].runState = 'gameover';
+
+				let outStr = ":tada: ";
+
+				let now = new Date();
+				let speed = now - scram[server.id].guessStartTime;
+				let fastest = utils.getStat(who, 'scram', 'fastest', gameStats) || 0;
+				let serverStats = utils.getStat(who, 'scram', server.id, gameStats) || {"wins": 0, "fastest": 0};
+				let serverFastest = serverStats.fastest;
+				let serverWins = serverStats.wins;
+
+
+				let guessTime = scramConfigs[scram[server.id].currentConfig].guessTime + scramConfigs[scram[server.id].currentConfig].extraGuessTime * theWord.length; // max allowed time
+				let multiplier = 1 - speed / guessTime;
+				multiplier = (multiplier * (scramConfigs[scram[server.id].currentConfig].maxMultiplier - scramConfigs[scram[server.id].currentConfig].minMultiplier) + minMultiplier);
+				let baseAward = scramConfigs[scram[server.id].currentConfig].baseAward + scramConfigs[scram[server.id].currentConfig].letterBounus * theWord.length;
+				let award = Math.round(baseAward * multiplier);
+
+
 				utils.addBank(message.author.id, award, bankroll);
-				
-				// global
+
+				outStr += i18n.st(
+					["scram", "victory"],
+					userLang,
+					[
+						`**${user.username}**`,
+						(speed / 1000).toFixed(1),
+						award,
+						baseAward,
+						multiplier.toFixed(2),
+						theWord
+					]
+				);
+
+				// check for global record
 				if (fastest <= 0 || speed < fastest) {
-					outStr += '\n :zap: That\'s a new global fastest time for them! :zap:';
+					outStr += "\n :zap: ";
+					outStr += i18n.st(["scram", "globalFastestPersonal"], userLang);
+					outStr += " :zap:";
+					//outStr += '\n :zap: That\'s a new global fastest time for them! :zap:';
 					utils.setStat(user, 'scram', 'fastest', speed, gameStats);
 				}
-				
+
 				// per-server
 				if (serverFastest <= 0 || speed < serverFastest) {
-					outStr += '\n :zap: That\'s a new fastest time for them on ' + server.name + '! :zap:';
+					outStr += "\n :zap: ";
+					outStr += i18n.st(["scram", "serverFastestPersonal"], userLang, [server.name]);
+					outStr += " :zap:";
+					//That\'s a new fastest time for them on ' + server.name + '! :zap:';
 					serverStats.fastest = speed;
 					utils.setStat(user, 'scram', server.id, serverStats, gameStats);
 				}
-				
+
 				utils.alterStat(message.author.id, 'scram', 'wins', 1, gameStats); //global
 				serverStats.wins += 1;
 				utils.setStat(user, 'scram', server.id, serverStats, gameStats); // per-server
-				
+
 				if (gameStats[message.author.id].scram.wins % 25 === 0) {
 					outStr += `\n WOW, amazing! That makes ${gameStats[message.author.id].scram.wins} wins!`;
 				} else {
@@ -300,8 +339,8 @@ module.exports = {
 				  gameStats[message.author.id].scram[server.id].wins + ' words! ' +
 				  '(' + gameStats[message.author.id].scram.wins + ' global wins)';
 				}
-				
-				var theDelay = Math.floor(Math.max(1, scramConfigs[scram[server.id].currentConfig].wordDelay - (scramConfigs[scram[server.id].currentConfig].wordDelayVariation / 2) +
+
+				let theDelay = Math.floor(Math.max(1, scramConfigs[scram[server.id].currentConfig].wordDelay - (scramConfigs[scram[server.id].currentConfig].wordDelayVariation / 2) +
 				  Math.random() * scramConfigs[scram[server.id].currentConfig].wordDelayVariation));
 				outStr += '\n Next word available in ' + Math.floor(theDelay / 1000) + ' second(s).';
 				scram[server.id].timer = setTimeout(function() {
@@ -310,9 +349,9 @@ module.exports = {
 						if (scram[server.id].announce) {
 							utils.chSend(message, 'There\'s a new `!scram` word ready!');
 						}
-					}	
+					}
 				}, theDelay);
-				
+
 				utils.chSend(message,  outStr);
 			} else {
 				//utils.chSend(message, 'Not the word.');
@@ -320,10 +359,11 @@ module.exports = {
 		}
 	},
 	do: function(message, parms, gameStats, bankroll) {
-		var server = message.guild;
+		let who = message.author.id;
+		let server = message.guild;
+		let userLang = utils.getStat(who, "i18n", "language", gameStats);
 		if (!server) {
-			utils.auSend(message, 'The word scramble game is meant to be played in public, and '+
-			'not direct messages. Sorry! It\'s more fun with others, anyway!');
+			utils.auSend(message, i18n.st(["scram", "noDMplay"], userLang));
 			return;
 		}
 		if (!scram.hasOwnProperty(server.id)) {
@@ -335,7 +375,7 @@ module.exports = {
 			scram[server.id].runState = 'ready';
 			scram[server.id].currentConfig = 'default';
 		}
-		
+
 		parms = parms.split(' ');
 		if (parms[0] !== '') {
 			parms[0] = parms[0].toLowerCase();
@@ -346,9 +386,9 @@ module.exports = {
 			}
 			// ignore non-sub-command extra stuff they type
 		}
-		
+
 		if (scram[server.id].runState === 'ready') {
-			var wordList;
+			let wordList;
 			// does this server have a custom word list? use if so
 			if (scramWordLists.hasOwnProperty(server.id)) {
 				wordList = scramWordLists[server.id];
@@ -356,43 +396,55 @@ module.exports = {
 				// use default list
 				wordList = cons.SCRAMWORDS;
 			}
-			var keys = Object.keys(wordList);
-			var theCat = keys[Math.floor(Math.random() * keys.length)];
-			var catWords = wordList[theCat].split(',');
-			var theWord = utils.listPick(catWords)[0];
+			let keys = Object.keys(wordList);
+			let theCat = keys[Math.floor(Math.random() * keys.length)];
+			let catWords = wordList[theCat].split(',');
+			let theWord = utils.listPick(catWords)[0];
 			scram[server.id].word = theWord;
-			
+
 			// find all the blanks and put their positions into an array
 			// do the scramble
 			// remove all the blanks again, and splice back into places
-			var spaceArr = [];
-			var theMess = '';
-			var scramConfig = scramConfigs[scram[server.id].currentConfig];
-			for (var i = 0; i < theWord.length; i++) {
+			let spaceArr = [];
+			let theMess = '';
+			let scramConfig = scramConfigs[scram[server.id].currentConfig];
+			for (let i = 0; i < theWord.length; i++) {
 				if (theWord.charAt(i) === ' ') {spaceArr.push(i);}
 			}
-			var scramWord = scrambler(theWord);
+			let scramWord = scrambler(theWord);
 			scramWord = scramWord.replace(/ /g, '');
 			spaceArr.forEach(function(spaceInd) {
 				scramWord = scramWord.slice(0, spaceInd) + ' ' + scramWord.slice(spaceInd);
-			});		  
-			theMess += 'Unscramble this: ' + utils.bigLet(scramWord) + '   *Category*: ' + theCat;
-
-			var guessTime = scramConfig.guessTime + scramConfig.extraGuessTime * theWord.length;
-			theMess += '\nYou have ' + Math.round(guessTime / 100) / 10 + 
-			  ' seconds to guess by typing `!s <guess>`.';
+			});
+			let guessTime = scramConfig.guessTime + scramConfig.extraGuessTime * theWord.length;
+			let formattedGuessTime = Math.round(guessTime / 100) / 10;
+			theMess += i18n.st(
+				["scram", "unscrambleThis"],
+				userLang,
+				[utils.bigLet(scramWord), theCat, formattedGuessTime]
+			);
+			/* theMess += '\nYou have ' + Math.round(guessTime / 100) / 10 +
+			  ' seconds to guess by typing `!s <guess>`.'; */
 			utils.chSend(message, theMess);
 			scram[server.id].runState = 'guessing';
-			
 			scram[server.id].guessStartTime = new Date();
-			var theDelay = Math.max(1, Math.round(scramConfig.wordDelay - (scramConfig.wordDelayVariation / 2) +
+			let theDelay = Math.max(1, Math.round(scramConfig.wordDelay - (scramConfig.wordDelayVariation / 2) +
 			  Math.random() * scramConfig.wordDelayVariation));
 			scram[server.id].guessTimer = setTimeout(function() {
 				if (scram[server.id].runState === 'guessing') {
+					/*
 					utils.chSend(message, 'The `!scram` word was not guessed' +
-					  ' in time! The word was: ' + scram[server.id].word + 
+					  ' in time! The word was: ' + scram[server.id].word +
 					  '\n Next word available in ' + Math.round(theDelay / 1000) + ' second(s).');
-					
+					*/
+					let theMess = i18n.st(
+						["scram", "notGuessed"],
+						userLang,
+						[scram[server.id].word, Math.round(theDelay / 1000)]
+					);
+
+					utils.chSend(message, theMess);
+
 					scram[server.id].runState = 'gameover';
 					scram[server.id].timer = setTimeout(function() {
 						if (scram[server.id].runState !== 'ready') {
@@ -400,12 +452,12 @@ module.exports = {
 							if (scram[server.id].announce) {
 								utils.chSend(message, 'There\'s a new `!scram` word ready!');
 							}
-						}	
+						}
 					}, theDelay);
 				}
 			}, guessTime);
 		} else {
-			utils.chSend(message, '`!scram` is not ready just yet.');
+			utils.chSend(message, i18n.st(["scram", "notReadyYet"], userLang));
 		}
 	}
 }

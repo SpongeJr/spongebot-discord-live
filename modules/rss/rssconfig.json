@@ -2,45 +2,52 @@
 	"sites": {
 		"reddit": {
 			"url": "https://www.reddit.com/.rss",
-			"freq": 3600,
-			"channels": ["402591405920223244"],
-			"maxNew": 6,
-			"initDelay": 20
+			"freq": 4200,
+			"channels": ["664808173579796490","664802808356143104"],
+			"maxNew": 8,
+			"initDelay": 1200
 		},
 		"slashdot": {
 			"url": "http://rss.slashdot.org/Slashdot/slashdotMain",
 			"freq": 3600,
-			"channels": ["402591405920223244"],
-			"maxNew": 6,
+			"channels": ["664808173579796490", "664802833974951937"],
+			"maxNew": 8,
 			"initDelay": 4200
 		},
 		"slashdot games": {
 			"url": "http://rss.slashdot.org/Slashdot/slashdotGames",
 			"freq": 43200,
-			"channels": ["637097995996758026"],
+			"channels": ["664808173579796490","664802867772784651"],
 			"maxNew": 4,
-			"initDelay": 600
+			"initDelay": 900
+		},
+		"slashdot science": {
+			"url": "http://rss.slashdot.org/Slashdot/slashdotScience",
+			"freq": 43200,
+			"channels": ["664808173579796490","664802847292129290"],
+			"maxNew": 4,
+			"initDelay": 7200
 		},
 		"xkcd": {
 			"url": "https://www.xkcd.com/rss.xml",
 			"freq": 43200,
-			"channels": ["402591405920223244"],
-			"maxNew": 4,
-			"initDelay": 15
+			"channels": ["664808173579796490","664803736300027914"],
+			"maxNew": 3,
+			"initDelay": 2048
 		},
 		"WIRED Science": {
 			"url": "https://www.wired.com/feed/category/science/latest/rss",
 			"freq": 43200,
-			"channels": ["637097969849597962", "402591405920223244"],
+			"channels": ["664808173579796490","664802847292129290"],
 			"maxNew": 4,
-			"initDelay": 15
+			"initDelay": 640
 		},
 		"Steam news": {
 			"freq": 28800,
 			"url": "https://store.steampowered.com/feeds/news.xml",
-			"channels": ["637097995996758026"],
+			"channels": ["664808173579796490","664802867772784651"],
 			"maxNew": 5,
-			"initDelay": 5
+			"initDelay": 750
 		}
 	}
 }

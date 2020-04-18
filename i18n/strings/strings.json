@@ -1,0 +1,292 @@
+{
+	"global": {
+		"langList": {
+			"en": [
+				"List of supported languages:",
+				"\n(Not all bot features are translated in all languages):"
+			]
+		},
+		"noSuchLang": {
+			"en": [
+				"That is not a valid language choice."
+			],
+			"es": [
+				"Esa no es una elección de idioma válida."
+			]
+		},
+		"newLangSet": {
+			"en": [
+				"Language is now: ",
+				0
+			],
+			"es": [
+				"Idioma ahora es: ",
+				0
+			]
+		},
+		"weeklyCollect": {
+			"en": [
+				"\n:moneybag: ",
+				"Loot bag collected!",
+				" :moneybag:\n\n",
+				0, ", you have added ",	1, " credits and ", 2, " x :tickets: (raffle tickets) to your bank.\n",
+				0, ", you now have ", 3, " :tickets: and ", 4, " credits! "
+			]
+		},
+		"weeklyCollectNoDM": {
+			"en": ["Sorry, you may not use this command in DM. Please go to a channel in a server."]
+		},
+		"weeklyCollectRoleBonusHeader": {
+			"en": ["**BONUSES for roles on _The Planet_**:\n"]
+		},
+		"weeklyCollectRoleBonusLine": {
+			"en": [
+				"\n", 0, " for having role: **", 1, "**"
+			]
+		},
+		"weeklyCollectRoleBonusFooter": {
+			"en": [
+				"\n  **TOTAL BONUS FOR ROLES:** ", 0
+			]
+		},
+		"bank": {
+			"en": [
+				0,
+				" has ", 1, " credits.\n", 0, " has ", 2, ":tickets:s"
+			],
+			"es": [
+				0, " tiene ", 1, " créditos.\n", 0, " tiene ", 2, ":tickets:s"
+			],
+			"zh-Hans": [
+				0,
+				"拥有",
+				1,
+				"分。\n",
+				0,
+				"拥有",
+				2,
+				":tickets:"
+			]
+		}
+	},
+	"lootFruit": {
+		"wishGroupCreated": {
+			"en": [
+				"You approach the magic wishing well.",
+				"\nYou sense that you will need to get at least a total of ", 0, " people gathered at the well for it to work.",
+				"\nIf you get ", 1, " people to focus on the task, you will maximize the well's effects.",
+				"\nYou have **", 2, "** seconds to form your group! Get others on the server to wish for the same thing!"
+			]
+		},
+		"joinedWishGroup": {
+			"en": [
+				"You have joined ", 0, "'s wishing well party. ",
+				"\nThere are now ", 1, " people in this party.",
+				"\nThe maximum party size is: ", 2,
+				"\nTime left in order for you to join the wishing party: **", 3, "** seconds"
+			],
+			"es": [
+				"Te has unido al grupo del pozo de los deseos de ", 0,
+				"\nAhora hay ", 1, " personas en este grupo.",
+				"\nLa capacidad maxima del grupo es: ", 2,
+				"\nTiempo restante para unir del grupo del pozo de los deseos son: **", 3, "** segundos"
+			]
+		},
+		"wishGroupFull": {
+			"en": [
+				"\n:information_source: The wishing well party has reached the maximum size! ",
+				"The magic wishing well's effects will be maximized!\n"
+			]
+		},
+		"noWishDM": {
+			"en": [
+				"The wishing well will not respond to you unless you approach it in a channel and not DM."
+			]
+		},
+		"seedWishGranted": {
+			"en": [0, " gets a seed!\n"],
+			"es": ["¡", 0, " consigue una semilla!\n"]
+		},
+		"lootWish": {
+			"en": [
+				"You sure wish you had more loot."
+			]
+		},
+		"timeWish": {
+			"en": [
+				"We all wish we had more time."
+			]
+		},
+		"wishTimeExpired": {
+			"en": [
+				"The wishing well glows with magic. Time is up!\n"
+			],
+			"es": [
+				"La magia del pozo de los deseos brilla. Se termino el tiempo!"
+			]
+		},
+		"wishNotEnoughPeople": {
+			"en": [
+				"(You needed ", 0, " people wishing but only had ", 1, ")"
+			]
+		},
+		"wishesGranted": {
+			"en": [
+				"Wow, your wish came true. You had ", 0, " people wishing together!\n"
+			]
+		},
+		"noFruitGetStarted": {
+			"en": [
+				"You have no loot fruit! ",
+				"Use `fruit list` to get started with a loot fruit garden that you can tend to and collect rewards from."
+			],
+			"es": [
+				"¡No tienes ninguna fruta botín! ",
+				"Use `fruit list` para comenzar con un jardín de frutas botín del que puede atender y recoger recompensas."
+			]
+		},
+		"noFruitToRedeem": {
+			"en": [
+				"You have no stored loot fruit to be redeemed!",
+				"\nYou can do `fruit list` to see your fruit status.",
+				"\nTo move ripe fruit from your garden to your storage, use the `fruit keep` command."
+			]
+		},
+		"specifyExactly3Fruits": {
+			"en": [
+				"You must specify _exactly_ 3 fruits from your stored fruit list to redeem.\n",
+				"All fruits should be of the same color or of the same flavor.\n",
+				"Specify fruits by numbers (use `fruit list` to see a list) and separate them with spaces.\n",
+				"Example: `fruit redeem 1 3 4`"
+			]
+		}
+	},
+	"scram": {
+		"unscrambleThis": {
+			"en": [
+				"Unscramble this word: ", 0,
+				"  **Category**: ", 1,
+				"\nYou have ", 2, " seconds to guess by typing `!s <your guess>`."
+			],
+			"es": [
+				"Descifra esta palabra: ", 0,
+				"  **Categoría:** ", 1,
+				"\nTienes ", 2,	" segundos adivinar escribiendo `!s <su suposición>.`"
+			],
+			"zh-Hans": [
+				"排列单词：",
+				0,
+				"**Categoría：**",
+				1,
+				"\n你有",
+				2,
+				"秒。要猜单词，请输入`!s <猜测>。`"
+			]
+		},
+		"notGuessed": {
+			"en": [
+				"The !scram word was not guessed in time! The word was: ",	0,
+				"\nNext word available in ", 1, " second(s)"
+			],
+			"es": [
+				"¡El !scram palabra no fue adivinada a tiempo! El palabra era: ", 0,
+				"\nSiguiente palabra disponible en ", 1, " segundo(s)"
+			]
+		},
+		"notReadyYet": {
+			"en": ["`!scram` is not ready just yet."],
+			"es": ["`!scram` no está listo todavía."],
+			"zh-Hans": ["用`!scram`前请等待。"
+			]
+		},
+		"victory": {
+			"en": [
+				0, " just unscrambled the word in ", 1,	" seconds and wins ", 2,
+				" credits! (", 3, " x ~", 4, " speed multiplier)",
+				" \n The word was: ", 5
+			],
+			"es": [
+				"¡", 0, " solo descifró la palabra en ", 1, " segundos y ganá ", 2,
+				" créditos (", 3, " x ~", 4, " multiplicador de velocidad)",
+				" \n La palabra era: ", 5
+			],
+			"zh-Hans": [
+				"¡",
+				0,
+				"在",
+				1,
+				"秒里猜到了单词，获得了",
+				2,
+				"分（",
+				3,
+				"倍～",
+				4,
+				"速度奖励）",
+				"\n单词是：",
+				5
+			]
+		},
+		"globalFastestPersonal": {
+			"en": ["That's a new global fastest time for them!"],
+			"es": ["¡Ese es un nuevo tiempo global más rápido para el!"],
+			"zh-Hans": ["那是他最快的速度！"]
+		},
+		"serverFastestPersonal": {
+			"en": ["That's a new fastest time for them on ", 0, "!"],
+			"es": ["¡Ese es un nuevo tiempo global más rápido para el en ", 0, "!"]
+		},
+		"noDMplay": {
+			"en": [
+				"The word scramble game is meant to be played in public channels, and not direct messages. Sorry! It's more fun with others, anyway!"
+			]
+		},
+		"configChangeOk": {
+			"en": ["Config successfully changed to: ", 0],
+			"es": ["La configuración se cambió correctamente a: ", 0]
+		},
+		"configChangeNotExist": {
+			"en": ["I see no scram config called `", 0, "` here!"],
+			"es": ["¡No veo ningún una configuración llamado `", 0, "` aquí!"]
+		},
+		"top10global": {
+			"en": [
+				"TOP 10 DESCRAMBLERS:\n",
+				"!SCRAM MASTER:  ->  ", 0, " <-  with ", 1, " wins!\n"
+			],
+			"es": [
+				"LOS 10 MEJORES DESCIFRADORES:\n",
+				"!SCRAM MAESTRO:  ->  ", 0, " <-  con ", 1, " victorias!\n"
+			]
+		},
+		"top10globalFastest": {
+			"en": [
+				"FASTEST DESCRAMBLERS:\n",
+				"SUPERSONIC SCRAM CHAMP:  ->  ", 0, "  <-  in ", 1, " seconds!\n"
+			]
+		},
+		"top10server": {
+			"en": [
+				"TOP 10 DESCRAMBLERS ON ", 0, ":\n",
+				"!SCRAM MASTER:  ->  ", 1, " <-  with ", 2, " wins!\n"
+			],
+			"es": [
+				"LOS 10 MEJORES DESCIFRADORES EN ", 0, ":\n",
+				"!SCRAM MAESTRO:  ->  ", 1, " <-  con ", 2, " victorias!\n"
+			]
+		},
+		"top10serverFastest": {
+			"en": [
+				"FASTEST DESCRAMBLERS ON ", 0, ":\n",
+				"SUPERSONIC SCRAM CHAMP:  ->  ", 1, "  <-  in ", 2, " seconds!\n"
+			]
+		},
+		"cantGuessNow": {
+			"en": ["You can't guess the scrambled word now! You need to wait for a new word to unscramble!"],
+			"es": ["¡No puedes adivinar la palabra revuelta ahora! ¡Tienes que esperar a que se descifre una nueva palabra!"]
+		},
+		"startScramFirst": {
+			"en": ["Please start `!scram` before guessing a scrambled word."],
+			"es": ["Inicia `!scram` antes de adivinar una palabra codificada, por favor."]
+		}
+	}
+}

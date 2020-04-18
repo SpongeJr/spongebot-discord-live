@@ -1,6 +1,6 @@
 const cons = require('../lib/constants.js');
 const utils = require('../lib/utils.js');
-
+const i18n = require('../modules/i18n.js');
 const emojis = {
 	common: {
 		tech: ':computer:,:iphone:,:keyboard:,:tv:,:mouse_three_button:,:video_game:',
@@ -18,14 +18,14 @@ const prices = {
 }
 
 module.exports = {
-	commands: {		
+	commands: {
 		buy: {
 			subCmd: {
 				common: {
 					do: function(message, args, gameStats, bankroll) {
 						let who = message.author;
 						let theMess = '';
-						
+
 						if (!bankroll.hasOwnProperty(who.id)) {
 							theMess += `${who.username}, you need a \`!bank\` account first.`;
 						} else if (bankroll[who.id] < prices.common) {
@@ -37,15 +37,15 @@ module.exports = {
 							let group = utils.listPick(Object.keys(commons));
 							let groupItems = emojis.common[group].split(',');
 							let item = utils.listPick(groupItems);
-	
+
 							if (!inv) {	inv = []; }
 							inv.push(item);
-							
+
 							utils.addBank(who.id, -prices.common, bankroll);
-							theMess += `${who.username}, you've won: ${item} from "${group}"` 
+							theMess += `${who.username}, you've won: ${item} from "${group}"`
 							theMess += `, and you now have  ${inv.length} item(s). \n`;
 							theMess += inv;
-							
+
 							utils.setStat(who.id, 'collectibles', 'inventory', inv, gameStats);
 						}
 						utils.chSend(message, theMess);
@@ -53,12 +53,12 @@ module.exports = {
 				},
 				rare: {
 					do: function(message, args, gameStats, bankroll) {
-						
+
 					}
 				},
 				epic: {
 					do: function(message, args, gameStats, bankroll) {
-						
+
 					}
 				},
 				prices: {
@@ -70,20 +70,20 @@ module.exports = {
 							theMess += `\n${rarity}: ${prices[rarity]}`;
 						}
 						theMess += '```';
-						
+
 						utils.chSend(message, theMess);
 					}
 				}
 			},
 			do: function(message, args, gameStats, bankroll) {
 				let author = message.author;
-				
-				
+
+
 			},
-			help: 'You can buy a collectible with `buy < common | uncommon | rare >`.' + 
+			help: 'You can buy a collectible with `buy < common | uncommon | rare >`.' +
 			  ' This will cost credits! You can type `buy prices` for the prices.'
 		},
-		
+
 		bank: {
 			subCmd: {},
 			cmdGroup: 'Fun and Games',
@@ -93,21 +93,21 @@ module.exports = {
 
 				if (args[0] === '') {
 					who = message.author.id;
-					
+
 					if (typeof bankroll[who] === 'undefined') {
 						utils.chSend(message, author.username + ', I don\'t see an account ' +
 						  'for you, so I\'ll open one with ' + cons.START_BANK + ' credits.');
-						
+
 						bankroll[who] = {};
 						bankroll[who].credits = cons.START_BANK;
 						utils.saveBanks(cons.BANK_FILENAME, bankroll);
 						utils.debugPrint('New bankroll made for ' + who + ' via !bank.');
 					}
-					
+
 				} else {
 					who = utils.makeId(args[0]);
 				}
-				
+
 				if (typeof bankroll[who] === 'undefined') {
 					utils.chSend(message, author.username + ', they don\'t have a bank account.');
 				} else if (isNaN(bankroll[who].credits)) {
@@ -116,11 +116,16 @@ module.exports = {
 					bankroll[who].credits = cons.START_BANK;
 					utils.saveBanks(cons.BANK_FILENAME, bankroll);
 					utils.debugPrint('Corrupted bankroll fixed for ' + who + ' via !bank.');
-					  
 				} else {
-					utils.chSend(message, utils.idToNick(who, gameStats)+ ' has ' + bankroll[who].credits + ' credits.');
-					utils.chSend(message, utils.idToNick(who, gameStats) +
+					let userLang = utils.getStat(who, "i18n", "language", gameStats);
+					let outP = i18n.st("bank", userLang, [utils.idToNick(who, gameStats), bankroll[who].credits, (utils.getStat(who, 'raffle', 'ticketCount', gameStats))]);
+					utils.chSend(message, outP);
+
+					//utils.chSend(message, utils.idToNick(who, gameStats)+ ' has ' + bankroll[who].credits + ' credits.');
+					/*
+					outP += i18n.st(message, utils.idToNick(who, gameStats) +
 					' has ' + (utils.getStat(who, 'raffle', 'ticketCount', gameStats) || 'no ') + ' :tickets: s.');
+					*/
 				}
 			},
 			help: '`!bank <user>` reveals how many credits <user> has. With no <user>, ' +

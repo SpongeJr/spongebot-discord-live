@@ -1,10 +1,17 @@
-// Contains !tree 
+// Contains !tree
 // Also weekly loot bag !collect code going in here for now
+// Also wishing well stuff
 
 const cons = require('../lib/constants.js');
-const FRUIT_VAL = 300;
 const utils = require('../lib/utils.js');
+const i18n = require('../modules/i18n.js');
+const v = {
+	wishingWell: {
+		groups: {}
+	}
+};
 const treefile = require('../' + cons.DATA_DIR + cons.LOOTTREE_FILE);
+const FRUIT_VAL = 300;
 let treesLoaded = false;
 
 //-----------------------------------------------------------------------------
@@ -16,11 +23,130 @@ let treesLoaded = false;
 		harvestMessages: [] Array of strings of things that might be said during harvesting
 */
 //-----------------------------------------------------------------------------
+const WishGroup = function(options) {
+	let leaderId = options.leaderId;
+	let message = options.message;
+	let userLang = options.userLang;
+	let formedTime = new Date().valueOf();
+	let outStr = "";
 
+	this.leader = {
+		"id": leaderId,
+		"name": message.author.username
+	};
+	this.members = [{
+		"id": leaderId,
+		"name": message.author.username
+	}];
+	this.formedTime = formedTime;
+	this.timer = setTimeout((userLang) => {
+		let theGroup = this;
+		let members = theGroup.members;
+		let groupSize = members.length;
+		let msgGuildId = message.guild.id;
+
+		let outP = this.text.wishTimeExpired(userLang, theGroup); // "time is up"
+		if (groupSize < cons.WISHINGWELL.minGroupSize) {
+			outP += i18n.st(
+				["lootFruit", "wishNotEnoughPeople"],
+				userLang,
+				[cons.WISHINGWELL.minGroupSize, groupSize]
+			);
+		} else {
+			outP += i18n.st(["lootFruit", "wishesGranted"], userLang, [groupSize]);
+			this.grantWishes("seeds", userLang, message);
+		}
+		utils.chSend(message, outP);
+		delete v.wishingWell.groups[msgGuildId];
+	}, cons.WISHINGWELL.groupTimeAllotment);
+};
+WishGroup.prototype.isFull = function() {
+	return this.members.length === cons.WISHINGWELL.maxGroupSize;
+};
+WishGroup.prototype.timeLeftToJoin = function() {
+	let now = new Date().valueOf();
+	return cons.WISHINGWELL.groupTimeAllotment - (now - this.formedTime);
+};
+WishGroup.prototype.text = {
+	wishTimeExpired: (userLang, theGroup) => {
+		let outStr = "";
+		let groupText = "";
+		let members = theGroup.members;
+
+		for (let member of members) {
+			groupText += member.name + ", ";
+		}
+		groupText = groupText.slice(0, -2);
+
+		outStr += i18n.st(["lootFruit", "wishTimeExpired"], userLang);
+		return outStr;
+	},
+	wishGroupCreated: (userLang, theGroup) => {
+		return i18n.st(
+			["lootFruit", "wishGroupCreated"],
+			userLang,
+			[cons.WISHINGWELL.minGroupSize, cons.WISHINGWELL.maxGroupSize, cons.WISHINGWELL.groupTimeAllotment  / 1000]
+		);
+	},
+	joinedWishGroup: (userLang, theGroup) => {
+		return i18n.st(
+			["lootFruit", "joinedWishGroup"],
+			userLang,
+			[
+				theGroup.leader.name,
+				theGroup.members.length,
+				cons.WISHINGWELL.maxGroupSize,
+				Math.floor(theGroup.timeLeftToJoin() / 1000)
+			]
+		);
+	},
+	wishGroupFull: (userLang, theGroup) => {
+		return i18n.st(["lootFruit", "wishGroupFull"], userLang);
+	},
+	wishGranted: (userLang, theGroup) => {
+		let groupSize = theGroup.members.length;
+		let groupText = "";
+		for (let member of theGroup.members) {
+			groupText += member.name + ", ";
+		}
+		groupText = groupText.slice(0, -2);
+		return i18n.st(["lootFruit", "wishesGranted"], userLang, [groupSize, groupText]);
+	}
+};
+WishGroup.prototype.grantOneWish = function(wish, member, userLang) {
+	let resultStr = "";
+	let memberName = member.name;
+	switch (wish) {
+		case "seeds": {
+			resultStr += i18n.st(["lootFruit", "seedWishGranted"], userLang, [memberName]);
+		}
+		break;
+		case "loot": {
+			resultStr += i18n.st(["lootFruit", "lootWishGranted"], userLang, [memberName]);
+		}
+		case "time": {
+			resultStr += i18n.st(["lootFruit", "timeWishGranted"], userLang, [memberName]);
+		}
+		default: {
+			resultStr += "WishGroup.grantWish(): WARNING! Tried to grant invalid wish: ${wish} for ${memberName}";
+			console.log("WishGroup.grantWish(): WARNING! Tried to grant invalid wish: ${wish} for ${memberName}");
+		}
+	}
+	return resultStr;
+};
+WishGroup.prototype.grantWishes = function (wish, userLang, message) {
+	let theGroup = this;
+	let outStr = "";
+	for (let member of theGroup.members) {
+		outStr += this.grantOneWish(wish, member, userLang);
+	}
+	utils.chSend(message, outStr);
+};
 const Fruit = function(stats) {
 	this.stats = stats || {};
 	this.stats.ripeness = stats.ripeness || 0;
 	this.stats.name = stats.name || ':seedling: budding';
+	// TODO maybe: this.stats.name = fruitRipenessString(this.stats.ripeness);
 	this.stats.valueMult = stats.valueMult || 0;
 	this.stats.special = {},
 	this.stats.id = stats.id || {
@@ -31,37 +157,37 @@ const Fruit = function(stats) {
 	  " " + tree.config.flavorList[this.stats.id.flavor];
 };
 Fruit.prototype.squish = function(allFruit, storedSlot) {
-	// allFruit is the entire tree.trees[who] object (i.e., .stored and .tree both)
+	// allFruit is the entire tree.trees[who] object (i.e., .stored and .garden both)
 	// storedSlot is which slot in the .stored this fruit is
 	// returns object with a success Boolean and a message
 	// it's all kind of a mess and probably needs refactored
 	let success;
 	let outP = "";
-	
+
 	let squished = allFruit.stored.splice(storedSlot, 1)[0];
 	success = true;
 	outP += `You squish your stored ${squished.stats.description} fruit.`;
 	outP += "\nYou now have one more slot free for storing loot fruit.";
 	return { "success": success, "message": outP };
 };
-Fruit.prototype.keep = function(allFruit, treeSlot) {
-	// allFruit is the entire tree.trees[who] object (i.e., .stored and .tree both)
-	// treeSlot is which slot in the .tree this fruit is
+Fruit.prototype.keep = function(allFruit, gardenSlot) {
+	// allFruit is the entire tree.trees[who] object (i.e., .stored and .garden both)
+	// gardenSlot is which slot in the .garden this fruit is
 	// returns object with a success Boolean and a message
 	// it's all kind of a mess and probably needs refactored
-	
+
 	let success;
 	let outP = "";
 	let maxKeep = tree.config.maxKeep; // maybe later varies by user
-	
+
 	if (allFruit.stored.length >= maxKeep) {
 		success = false;
 		outP += `Sorry, the max stored fruit is ${maxKeep}! You'll have to do something about that first.`;
 	} else {
-		
+
 		if (this.stats.ripeness > 0.8 && this.stats.ripeness <= 1.3) {
 			success = true;
-			let thisFruit = allFruit.tree.splice(treeSlot, 1)[0];
+			let thisFruit = allFruit.garden.splice(gardenSlot, 1)[0];
 			allFruit.stored.push(thisFruit);
 			outP += "Okay, done!";
 		} else {
@@ -71,40 +197,21 @@ Fruit.prototype.keep = function(allFruit, treeSlot) {
 	}
 	return {"success": success, "message": outP};
 };
-Fruit.prototype.pick = function() {
+Fruit.prototype.pick = function(who, gameStats, allFruit, gardenSlot) {
 	// returns object with a message and a value to add to bank
+	// previously would also delete itself from allFruit array -- no longer!
 	let outP = '';
 	let totValue = 0;
-	
-	// TODO: Replace with squishChance constant or something, and rethink
-	// since squish mechanic may be desired in Fruit.keep() also
-	// Squish mechanic disabled for now.
-	/*
-	if (Math.random() < 0.08) {
-		outP += this.stats.name + ' loot fruit got squished! ';
-		this.stats.name = ':grapes: a squished';
-		this.stats.valueMult = 0;
-	}
-	*/
-	
+
 	totValue = FRUIT_VAL * this.stats.valueMult;
-	
-	outP += this.stats.name + ' loot fruit was picked for ' + FRUIT_VAL +
-	  ' x ' + (this.stats.valueMult * 100) + '% = ' + totValue;
-		
-	// start a new fruit for them, up to 4% ripe
-	// not really ideal doing it here and like this
-	// we maybe need a fruit.respawn()
-	// also might have replanting of trees, idk
-	this.stats.ripeness = Math.random() * 0.04;
-	this.stats.name = ':seedling: budding';
-	this.stats.valueMult = 0;
-	
-	return {message: outP, value: totValue}
+
+	outP += `${this.stats.name} loot fruit was picked for ${FRUIT_VAL}` +
+	  ` x ${this.stats.valueMult * 100}% = ${totValue}`;
+	return { message: outP, value: totValue }
 };
 Fruit.prototype.age = function() {
 	this.stats.ripeness = parseFloat(this.stats.ripeness + Math.random() * 0.4);
-	
+
 	// TODO: replace magic numbers here with constants
 	if (this.stats.ripeness > 1.3) {
 		this.stats.name = ':nauseated_face: rotten';
@@ -128,33 +235,20 @@ const loadTrees = function() {
 
 	for (let whoseTree in tree.trees) {
 		let allFruit = tree.trees[whoseTree];
-		
-		// TEMPORARY FILE FORMAT UPDATE BOOTSTRAP CODE
-		/*
-		if (Array.isArray(allFruit)) {
-			// old file format, so we need to update...
-			let newAllFruit = {"tree": [], "stored": []};
-			for (let i = 0; i < allFruit.length; i++) {
-				newAllFruit.tree.push(allFruit[i]);
-			}
-			tree.trees[whoseTree] = newAllFruit;
-			allFruit = tree.trees[whoseTree];
-		}
-		*/
-		
-		// where = "tree", "stored", etc.
+
 		for (let where in allFruit) {
-			for (let i = 0; i < allFruit[where].length; i++) {				
+			for (let i = 0; i < allFruit[where].length; i++) {
 				tree.trees[whoseTree][where][i] = new Fruit(allFruit[where][i].stats);
 			}
 		}
 	}
 	treesLoaded = true;
 };
+// TODO: replace tree.config object with a JSON configuration file
 const tree = {
 	config: {
-		colorList: ['striped','spotted','plain', 'shiny', 'dull', 'dark', 'light', 'bright', 'mottled'],
-		flavorList: ['red','orange','yellow','green','blue','indigo','golden','silver'],
+		colorList: ['striped','spotted','plain', 'shiny', 'dull', 'dark', 'light', 'bright', 'mottled','sparkly'],
+		flavorList: ['red','orange','yellow','green','blue','indigo','violet','golden','silver','white'],
 		treeVal: 3500,
 		ticketRarity: 12,
 		magicSeedRarity: 8,
@@ -167,6 +261,7 @@ const tree = {
 	trees: treefile
 };
 module.exports = {
+
 	timers: {
 		harvest: {
 			howOften: cons.ONE_DAY / 2,
@@ -185,172 +280,226 @@ module.exports = {
 			howOften: cons.ONE_HOUR / 4,
 			gracePeriod: 0,
 			failResponse: 'You can only pick your loot fruit every <<howOften>>, ' +
-			  ' and you need to wait <<next>> before you can do it again.'			
+			  ' and you need to wait <<next>> before you can do it again.'
 		}
 	},
 	subCmd: {
-		check: {
-			do: function(message, parms, gameStats, bankroll) {
-				var who = message.author.id;
-				var now = new Date();
-				var timers = module.exports.timers;
-				var lastCol = utils.alterStat(who, 'lastUsed', 'tree-harvest', 0, gameStats);
-				var nextCol = lastCol + timers.harvest.howOften - timers.harvest.gracePeriod;
-				var percentGrown;
-				now = now.valueOf();
+		redeem: {
+			do: function(message, args, gameStats, bankroll) {
+				// must specify three fruit indices from stored fruits that match
+				// in color or flavor, or both
+				// Ex:  !fruit redeem 1 3 9
+				let who = message.author.id;
+				let userLang = utils.getStat(who, "i18n", "language", gameStats);
+				let outP = "";
 
-				if (utils.checkTimer(message, who, 'tree-harvest', timers.harvest, gameStats)) {
-					utils.chSend(message, 'Your loot tree is fully grown, and you should harvest it '+
-					  ' with `!tree harvest` and get your goodies!');
-				} else {
-					percentGrown = 100 * (1 - ((nextCol - now) / (timers.harvest.howOften - timers.harvest.gracePeriod)));
-					utils.chSend(message, ' Your loot tree is healthy, and looks to be about ' +
-					'about ' + percentGrown.toFixed(1) + '% grown. It ought to be fully grown' +
-					' in about ' + utils.msToTime(nextCol - now));
+
+				if (!tree.trees.hasOwnProperty(who)) {
+					/* utils.chSend(message, "You have no loot fruit! Use `fruit list` to get started " +
+					  "with a loot fruit garden that you can tend to and collect rewards from.");
+					*/
+					utils.chSend(message, i18n.st(["lootFruit", "noFruitGetStarted"], userLang));
+					return;
 				}
-			},
+				let storedFruit = tree.trees[who].stored;
+				if (!Array.isArray(storedFruit)) {
+					/*utils.chSend(message, "You have no stored loot fruit to be redeemed!" +
+					  "\nYou can do `fruit list` to see your fruit status." +
+					  "\nTo move ripe fruit from your garden to stored, use the " +
+					  "`fruit keep` command.");
+					  */
+					utils.chSend(message, i18n.st(["lootFruit", "noFruitToRedeem"], userLang));
+					return;
+				}
+				args = args.split(" ");
+
+				if (args.length !== 3) {
+					/*
+					utils.chSend(message, "You must specify _exactly_ 3 fruits from your stored " +
+					  "fruit list to redeem. All fruits should be of the same color or flavor.\n" +
+					  "Specify fruits by numbers (use `fruit list` to see a list) and separate them with spaces." +
+					  "\n Example: `fruit redeem 1 3 4`");
+					*/
+					utils.chSend(message, i18n.st(["lootFruit", "specifyExactly3Fruits"], userLang));
+					return;
+				}
+
+				let colors = {};
+				let flavors = {};
+				let choiceCount = {}; // we use this to make sure they don't do dupes like !redeem 2 5 2
+
+				let failed = false;
+				let failMsg = "";
+				args.forEach( (arg) => {
+					fruitChoice = parseInt(arg, 10);
+					if (isNaN(fruitChoice) || (fruitChoice < 1) || (fruitChoice > storedFruit.length)) {
+						failMsg = ":warning: Invalid fruit number(s). Please do `fruit list` " +
+						  "and select which fruits you want to redeem from your **stored** fruits.";
+						failed = true;
+						return;
+					}
+					choiceCount[fruitChoice] = choiceCount[fruitChoice] || 0;
+					choiceCount[fruitChoice]++;
+					console.log(`${fruitChoice} count is: ${choiceCount[fruitChoice]}`);
+					if (choiceCount[fruitChoice] > 1) {
+						failMsg = ":warning: You need to specify three _unique_ fruits from your stored list." +
+						  "\n Use `fruit list` if you need to list them.";
+						failed = true;
+						return;
+					}
+					// arg - 1 is because zero-based indexes
+
+					colors[storedFruit[arg - 1].stats.id.color] = colors[storedFruit[arg - 1].stats.id.color] || 0;
+					flavors[storedFruit[arg - 1].stats.id.flavor] = flavors[storedFruit[arg - 1].stats.id.flavor] || 0;
+					colors[storedFruit[arg - 1].stats.id.color]++;
+					flavors[storedFruit[arg - 1].stats.id.flavor]++;
+				});
+
+				if (failed) {
+					utils.chSend(message, failMsg);
+					return;
+				}
+
+				let colorMatch = false;
+				let flavorMatch = false;
+				for (let color in colors) {
+					if (colors[color] === 3) {
+						colorMatch = true;
+						colorMatchName = tree.config.colorList[color];
+					}
+				}
+				for (let flavor in flavors) {
+					if (flavors[flavor] === 3) {
+						flavorMatch = true;
+						flavorMatchName = tree.config.flavorList[flavor];
+					}
+				}
+
+				let ticketsEarned = 0;
+				if (colorMatch) {
+					outP += `Your match of three ${colorMatchName} fruits has been redeemed for a raffle ticket!\n`;
+					ticketsEarned++;
+				}
+				if (flavorMatch) {
+					outP += `Your match of three ${flavorMatchName} fruits has been redeemed for a raffle ticket!\n`;
+					ticketsEarned++;
+				}
+
+				if (colorMatch && flavorMatch) {
+					outP += `You receive a bonus raffle ticket for a perfect match of three ` +
+					  `${flavorMatchName} ${colorMatchName} fruits! Congrats!\n`;
+					ticketsEarned++;
+				}
+
+				if (ticketsEarned) {
+					outP += `${ticketsEarned} raffle ticket(s) have been added to your account!\n`;
+					outP += "You now have " +
+					  `${utils.alterStat(who, 'raffle', 'ticketCount', ticketsEarned, gameStats)} raffle tickets.`;
+
+					fruitsToRemove = new Set(args);
+					tree.trees[who].stored = tree.trees[who].stored.filter(
+						(el, ind) => { !fruitsToRemove.has(ind); }
+					);
+
+				} else {
+					outP += "You do not have a match of either of three of the same fruit or flavor of loot fruit.\n";
+					outP += "You must have a match of three to use `fruit redeem`.";
+				}
+				utils.saveObj(tree.trees, cons.LOOTTREE_FILE);
+				utils.chSend(message, outP);
+			}
+		},
+		plant: {
+			do: function(message, parms, gameStats, bankroll) {
+				let who = message.author.id;
+				let outP = '';
+				let treeSeeds = utils.getStat(who, "tree", "regularSeeds", gameStats);
+				if ((!treeSeeds) || (treeSeeds < 1)) {
+					outP += "You have no loot fruit seeds to plant.\n";
+					outP += "They are difficult to acquire right now, good luck!";
+				} else {
+					let maxFruit = utils.getStat(who, "tree", "maxFruit", gameStats) || 4;
+					let fruit = tree.trees[who];
+
+					if (!fruit) {
+						outP += "It looks like you don't have a fruit garden yet!\n";
+						outP += "Do `fruit list` first to get one started.";
+						utils.chSend(message, outP);
+						return;
+					}
+
+					if (fruit.garden.length < maxFruit) {
+						tree.trees[who].garden.push(new Fruit({}));
+						treeSeeds = utils.alterStat(who, 'tree', 'regularSeeds', -1, gameStats);
+						outP += "You carefully plant the loot fruit seed. Use `fruit list` to show your fruit.\n";
+						outP += `You now have **${treeSeeds}** loot fruit seeds remaining.`;
+					} else {
+						outP += `Your garden cannot currently hold more loot fruit.`;
+						outP += `\nYou can have a maximum of ${maxFruit} planted fruits.`;
+					}
+				}
+				utils.saveObj(tree.trees, cons.LOOTTREE_FILE);
+				utils.chSend(message, outP);
+			}
 		},
 		harvest: {
 			do: function(message, parms, gameStats, bankroll) {
-				var who = message.author.id;
-				var timers = module.exports.timers;
-				if (!utils.collectTimer(message, who, 'tree-harvest', timers.harvest, gameStats)) {
-					// not time yet. since we used collectTimer();, the rejection message
-					// is automatic, and we can just return; here if we want
-					return;
-				} else {
-					// if we're here, it's time to collect, and collectTime has been updated to now
-					var messStr = '';
-					var collectVal = 0;
-					var fruitBonus = 0;
-					var fruitBonusStr = '';
-					
-					//fruit bonus (disabled)
-					/*
-					if (tree.trees.hasOwnProperty(who)) {
-						fruitBonus += 50 * tree.trees[who].length;
-					}
-					*/
-					collectVal = tree.config.treeVal + fruitBonus;
-					
-					var specialRoles = {
-						"Admin": 50,
-						"Dev": 75,
-						"Emoji manager": 2000,
-						"Tester": 800,
-						"Musician": 750,
-						"Artist": 750,
-						"Writer": 750,
-						"giveaways": 300,
-					};
-					var role;
-					var roleBonusStr = '';
-					var totalRoleBonus = 0;
-					if (message.guild === cons.SERVER_ID) {
-						for (var roleName in specialRoles) {
-							role = message.guild.roles.find('name', roleName);
-							if (message.member.roles.has(role.id)) {
-								roleBonusStr += roleName + '(' + specialRoles[roleName] + '), ';
-								totalRoleBonus += specialRoles[roleName];
-							}
-						}
-						
-						if (totalRoleBonus !== 0) {
-							roleBonusStr = roleBonusStr.slice(0, roleBonusStr.length - 2); // remove last comma
-							roleBonusStr = 'Included these bonuses for having special roles on The Planet: ' + roleBonusStr;
-							roleBonusStr += '\n   Total role bonus: ' + totalRoleBonus + '! ';
-							collectVal += totalRoleBonus;
-						}
-					}
-					
-					if (fruitBonus > 0) {
-						fruitBonusStr += '\n Also added ' + fruitBonus + ' for trying `!tree fruit` since' +
-						  'the last bot reset. ';
-					}
-					
-					messStr +=  ':deciduous_tree: Loot tree harvested!  :moneybag:\n ' +
-					  utils.makeTag(who) +  ' walks away ' + collectVal + ' credits richer! ' +
-					  '\n' + roleBonusStr + fruitBonusStr;
-					utils.addBank(who, collectVal, bankroll);
-					
-					//random saying extra bit on end: 
-					var sayings = JSON.stringify(tree.config.harvestMessages);
-					sayings = JSON.parse(sayings);
-					messStr += utils.listPick(sayings);
-					
-					messStr += "\n:warning: Tree harvesting will soon be replaced by the updated loot fruit game!\n";
-					messStr += ":warning: Please stay tuned for updates!";
-					
-					utils.chSend(message, messStr);
-					
-					//magic seeds ... (do nothing right now unfortunately) =(
-					//since I'm testing and will have them set common, we're calling them "regularSeeds"
-					if (Math.floor(Math.random() * tree.config.magicSeedRarity) === 0) {
-						utils.chSend(message, utils.makeTag(who) + ', what\'s this? You have found a ' +
-						'loot tree seed in your harvest! Looks useful! You save it.');
-						
-						utils.alterStat(who, 'tree', 'regularSeeds', 1, gameStats);
-					}
 
-					//raffle ticket! DOES award, be careful with rarity!
-					if (Math.floor(Math.random() * tree.config.ticketRarity) === 0) {
-						utils.chSend(message, utils.makeTag(who) + ', what\'s this? A raffle ticket ' +
-						':tickets: fell out of the tree! (`!giveaways` for more info.)');
-						utils.alterStat(who, 'raffle', 'ticketCount', 1, gameStats);
-					
-					}
-				}
+			let messStr = "";
+			messStr += ":thinking: You look for your loot tree but find a garden of loot fruit in its place!"
+			messStr += "\nUse `!fruit list` to check your garden, and `!help fruit` for more information about it.";
+
+			utils.chSend(message, messStr);
 			}
 		},
-		fruit: {
+		list: {
 			do: function(message, parms, gameStats, bankroll) {
-				
+
 				let who = message.author.id;
 				if (tree.trees.hasOwnProperty(who)) {
 					let fruit = tree.trees[who];
-					
+
 					// show each fruit's stats
 					let fruitMess = '``` Loot fruit status for '+ message.author.username +': ```\n';
-					
+
 					for (let where in fruit) {
 						fruitMess += `\n**Location: _${where}_**\n`;
 						let theseFruits = fruit[where];
 						for (let i = 0; i < theseFruits.length; i++) {
 							fruitMess += `\`${i + 1}\``.padStart(3) + ": ";
-							fruitMess += `${theseFruits[i].stats.name} ${theseFruits[i].stats.description}` +
-							  `(${theseFruits[i].stats.id.color}, ${theseFruits[i].stats.id.flavor})` + 
-							  ` loot fruit   Ripeness: ${(theseFruits[i].stats.ripeness * 100).toFixed(1)} %`;
+							fruitMess += `${theseFruits[i].stats.name} ${theseFruits[i].stats.description} loot fruit   ` +
+							`Ripeness: ${(theseFruits[i].stats.ripeness * 100).toFixed(1)} %`;
 							if (theseFruits[i].stats.health) {
 								fruitMess += ' (thriving!)';
 							}
 							fruitMess += '\n';
 						}
 					}
-					
+
 					utils.chSend(message, fruitMess);
 				} else {
 					utils.chSend(message, 'I see no fruit for you to check, ' + message.author +
-					  '\nI\'ll give you three starter fruit. You can !tree tend or !tree pick them' +
-					  ' at any time, for now.');
-					tree.trees[who] = { "tree": {}, "stored": {} };
-					tree.trees[who].tree.push(new Fruit({}));
-					tree.trees[who].tree.push(new Fruit({}));
-					tree.trees[who].tree.push(new Fruit({}));
+					  '\nI\'ll give you three starter fruit. You can !fruit tend or !fruit pick them' +
+					  ' at any time, for now. You can also stored them with !fruit keep.');
+					tree.trees[who] = { "garden": [], "stored": [] };
+					tree.trees[who].garden.push(new Fruit({}));
+					tree.trees[who].garden.push(new Fruit({}));
+					tree.trees[who].garden.push(new Fruit({}));
 				}
 			}
 		},
 		tend: {
 			do: function(message, parms, gameStats, bankroll) {
-				let timers = module.exports.timers;				
+				let timers = module.exports.timers;
 				let who = message.author.id;
 				let fruitMess = "";
 				if (tree.trees.hasOwnProperty(who)) {
-					
+
 					if (!utils.collectTimer(message, who, 'tree-tend', timers.tend, gameStats)) {
 						return;
 					}
-					
-					let fruit = tree.trees[who].tree;
+
+					let fruit = tree.trees[who].garden;
 					// tend to each Fruit
 					fruitMess += "You decide to use magic to try to ripen all of your trees loot fruit at once.\n"
 					fruitMess += '``` Loot fruit status for '+ message.author.username +': ```\n';
@@ -360,8 +509,8 @@ module.exports = {
 						if (ageIt) {
 							fruit[i].age();
 						}
-						fruitMess += fruit[i].stats.name + ' ' + fruit[i].stats.description +
-						  ' loot fruit   Ripeness: ' + (fruit[i].stats.ripeness * 100).toFixed(1) + '%';
+						fruitMess += `${fruit[i].stats.name} ${fruit[i].stats.description}` +
+						  ` loot fruit   Ripeness: ${(fruit[i].stats.ripeness * 100).toFixed(1)} %`;
 						if (ageIt) {
 							fruitMess += ' (tended)';
 						} if (fruit[i].stats.health) {
@@ -381,30 +530,45 @@ module.exports = {
 				let timers = module.exports.timers;
 				let pickMess = "";
 				let who = message.author.id;
+				let totalFruitVal = 0;
 				if (tree.trees.hasOwnProperty(who)) {
 					if (!utils.collectTimer(message, who, 'tree-pick', timers.pick, gameStats)) {
 						return;
 					}
-				
-					let fruit = tree.trees[who].tree;
-				
+
+					let fruit = tree.trees[who].garden;
+
+					if (fruit.length === 0) {
+						pickMess += "You current have no fruit in your garden!\n";
+						pickMess += "You can plant loot fruit with `!fruit plant`, ";
+						pickMess += "if you have fruit seeds.";
+						utils.chSend(message, pickMess);
+						return;
+					}
+
 					// .pick() each Fruit
-					pickMess += "You decide to pick all of your loot fruit and let it turn to loot in yours hands.\n"
+					pickMess += "You decide to pick all of your loot fruit and let it turn to loot in your hands.\n"
 					pickMess += '```Loot Fruit pick results for '+ message.author.username +': ```\n ';
-					var totalFruitVal = 0;
 					for (let i = 0; i < fruit.length; i++) {
-						let pickResult = fruit[i].pick();
+						let pickResult = fruit[i].pick(who, gameStats, tree.trees[who], i);
 						totalFruitVal += pickResult.value;
 						pickMess += pickResult.message + '\n';
 					}
+					pickMess += `\nYou will need to do \`!fruit plant\` in order to get another ` +
+					  `fruit, and you must have a loot fruit seed in order to do so.`;
+					let treeSeeds = utils.getStat(who, "tree", "regularSeeds", gameStats);
+					if (!treeSeeds) { treeSeeds = "NO"; }
+					pickMess += `You have **${treeSeeds}** loot fruit seeds remaining.`;
+					tree.trees[who].garden = []; // empty their fruit garden
 				} else {
-					utils.chSend(message, 'You have no trees! Try doing `tree fruit` first.');
+					utils.chSend(message, 'You have no fruit! Try doing `fruit list` first.');
 					return;
 				}
 				pickMess += '\n **TOTAL LOOT FRUIT VALUE**: ' + totalFruitVal + ' (added to your bank)';
-				pickMess += '\n\n :information_source: TIP: You can ~~now~~ (soon) save fruit with `tree keep <#>`!';
-				pickMess += 'Try to make a matched set of 3 of the same type or color of fruit! ';
+				pickMess += '\n\n :information_source: TIP: You can now save fruit with `fruit keep <#>`!';
+				pickMess += '\nTry to make a matched set of 3 of the same type or color of fruit! ';
 				utils.addBank(who, totalFruitVal, bankroll);
+				utils.saveObj(tree.trees, cons.LOOTTREE_FILE);
 				utils.chSend(message, pickMess);
 			}
 		},
@@ -413,13 +577,13 @@ module.exports = {
 				let who = message.author.id;
 				let mess = "";
 				let fruitChoice = parseInt(parms, 10);
-				
+
 				if (!tree.trees.hasOwnProperty(who)) {
-					utils.chSend(message, 'You have no trees! Try doing `tree fruit` first.');
+					utils.chSend(message, 'You have no trees! Try doing `fruit list` first.');
 					return;
 				} else {
-					let unpickedFruit = tree.trees[who].tree;
-					
+					let unpickedFruit = tree.trees[who].garden;
+
 					if (!Array.isArray(unpickedFruit)) {
 						console.log(`!tree keep: WARNING! tree.trees.${who}. did not have a tree[] array!`);
 						utils.chSend(message, "Something seems to be seriously wrong with your loot fruit trees!");
@@ -427,10 +591,10 @@ module.exports = {
 					}
 
 					if (fruitChoice < 1 || isNaN(fruitChoice) || fruitChoice > unpickedFruit.length) {
-						utils.chSend(message, "Invalid fruit number. You can do `tree fruit` first to list them.");
+						utils.chSend(message, "Invalid fruit number. You can do `fruit list` first to list them.");
 						return;
 					}
-					
+
 					if (typeof unpickedFruit[fruitChoice - 1] === "undefined") {
 						utils.chSend(message, "Something seems to be seriously wrong with that loot fruit!");
 						return;
@@ -443,6 +607,7 @@ module.exports = {
 						mess += keepResult.message;
 					}
 				}
+				utils.saveObj(tree.trees, cons.LOOTTREE_FILE);
 				utils.chSend(message, mess);
 			}
 		},
@@ -451,24 +616,24 @@ module.exports = {
 				let who = message.author.id;
 				let mess = "";
 				let fruitChoice = parseInt(parms, 10);
-				
+
 				if (!tree.trees.hasOwnProperty(who)) {
-					utils.chSend(message, 'You have no trees! Try doing `tree fruit` first.');
+					utils.chSend(message, 'You have no fruit! Try doing `fruit list` first.');
 					return;
 				} else {
 					let storedFruit = tree.trees[who].stored;
-					
+
 					if (!Array.isArray(storedFruit)) {
 						console.log(`!tree keep: WARNING! tree.trees.${who}. did not have a stored[] array!`);
-						utils.chSend(message, "Something seems to be seriously wrong with your loot fruit trees!");
+						utils.chSend(message, "Something seems to be seriously wrong with your loot fruit!");
 						return;
 					}
 
 					if (fruitChoice < 1 || isNaN(fruitChoice) || fruitChoice > storedFruit.length) {
-						utils.chSend(message, "Invalid stored fruit number. You can do `tree fruit` first to list them.");
+						utils.chSend(message, "Invalid stored fruit number. You can do `fruit list` first to list them.");
 						return;
 					}
-					
+
 					if (typeof storedFruit[fruitChoice - 1] === "undefined") {
 						utils.chSend(message, "Something seems to be seriously wrong with that loot fruit!");
 						return;
@@ -480,43 +645,177 @@ module.exports = {
 					} else {
 						mess += squishResult.message;
 					}
-					
+					utils.saveObj(tree.trees, cons.LOOTTREE_FILE);
 					utils.chSend(message, mess);
 				}
 			}
 		}
 	},
 	cmdGroup: 'Fun and Games',
-	help: 'Interact with your loot `!tree` and collect regular rewards!',
-	longHelp: 'Your loot tree is a guaranteed source of credits on this server!\n' +
-	  ' You can currently `!tree check` your tree, or `!tree harvest` from it.\n' +
-	  ' They normally pay out every 12 hours.' +
-	  ' \n Loot trees will always award credit when harvested, and sometimes other ' +
-	  ' surprises! \n :deciduous_tree: :deciduous_tree: Good luck! :moneybag: :moneybag:',
+	help: 'Interact with your loot `!fruit` and collect regular rewards!',
+	longHelp: 'Your loot fruit is a guaranteed source of credits on this server!\n' +
+	  ' Commands to try: `fruit list` `fruit tend` `fruit pick` `fruit keep` `fruit plant` `fruit squish`\n' +
+	  '`fruit list`: show you current fruit garden and stored fruit\n' +
+	  '`fruit tend`: increases the ripeness of some fruit in your garden, randomly\n' +
+	  '`fruit pick`: pick **all** fruit in your garden for some credits -- try to pick ripe fruit!\n' +
+	  '`fruit keep #`: move fruit # from your garden to your stored fruits\n' +
+	  '`fruit plant`: plant fruit in your garden -- you must have fruit seeds to do this\n' +
+	  '`fruit squish #:` squish (destroy) fruit # from your **stored** fruits (to make room for others)\n',
 	disabled: false,
 	access: false,
 	do: function(message, parms, gameStats, bankroll) {
-		
+
 		if (!treesLoaded) {
 			loadTrees();
 			console.log('tree.do(): Fruit placed on trees.');
 		}
-		
-		parms = parms.split(' ');		
+
+		parms = parms.split(' ');
 		if (parms[0] === '') {
-			utils.chSend(message, 'Please see `!help tree` for help with your loot tree.');
+			utils.chSend(message, 'Please see `!help fruit` for help with your loot fruit.' +
+			  '\nUse `!fruit list` to list your loot fruit.');
 			return;
 		}
 		parms[0] = parms[0].toLowerCase();
 		let subCmd = parms[0];
-		
+
 		if (this.subCmd.hasOwnProperty(parms[0])) {
 			//we've found a found sub-command, so do it...
 			parms.shift();
 			parms = parms.join(' ');
 			this.subCmd[subCmd].do(message, parms, gameStats, bankroll);
 		} else {
-			utils.chSend(message, 'What are you trying to do to that tree?!');
+			utils.chSend(message, 'What are you trying to do to that loot fruit?!');
+		}
+	},
+	resetwishes: {
+		do: function(message, parms, gameStats, bankroll) {
+			utils.setStat(message.author.id, "lastUsed", "wishingWell", 0, gameStats);
+		}
+	},
+	wishingwell: {
+		timers: {
+			howOften: cons.ONE_DAY,
+			gracePeriod: cons.ONE_HOUR,
+			failResponse: 'You visit the magic `!wish`ing well, but it ' +
+		  'appears dull, grey, and lifeless. No magic aura surrounds it. ' +
+		  '\nYou sense that the well will respond to you in <<next>>.'
+		},
+		help: "Visit the magic `!wish`ing well and make a wish today!",
+		longHelp: "Visit the magic `!wish`ing well and make a wish today!" +
+		  "\nGet other server members to join you for the best outcome." +
+		  "\nFor now, try `!wish seeds`",
+		access: [],
+		disabled: false,
+		do: function(message, parms, gameStats, bankroll) {
+			let who = message.author.id;
+			let userLang = utils.getStat(who, "i18n", "language", gameStats);
+			parms = parms.split(' ');
+			if (parms[0] === '') {
+				utils.chSend(message, 'Please see `!help wish` for help with the wishing well.');
+				return;
+			}
+			parms[0] = parms[0].toLowerCase();
+			let subCmd = parms[0];
+
+			if (this.subCmd.hasOwnProperty(parms[0])) {
+				//we've found a found sub-command, so do it...
+				parms.shift();
+				parms = parms.join(' ');
+				if (!utils.collectTimer(message, who, 'wishingWell', this.timers, gameStats)) {
+					// not time yet. since we used collectTimer(), the rejection message
+					// is automatic, and we can just return; here if we want
+					return;
+				} else {
+					// the else is unnecessary but keeping it here
+					this.subCmd[subCmd].do(message, parms, gameStats, bankroll);
+				}
+			} else {
+				utils.chSend(message, 'What are you trying to do to that magic wishing well?!');
+			}
+		},
+
+		subCmd: {
+			seeds: {
+				do: function(message, parms, gameStats, bankroll) {
+					let who = message.author.id;
+					let userLang = utils.getStat(who, "i18n", "language", gameStats);
+					let msgGuild = message.guild;
+					let outStr = "";
+					let msgGuildId;
+					if (msgGuild) {
+						msgGuildId = message.guild.id;
+					} else {
+						utils.chSend(message, i18n.st(["lootFruit", "noWishDM"], userLang));
+						return;
+					}
+
+					// check for existing group on this server
+					if (v.wishingWell.groups[msgGuildId]) {
+						// existing group found!
+						let theGroup = v.wishingWell.groups[msgGuildId];
+						let leader = theGroup.leader;
+						theGroup.members.push({
+							id: who,
+							name: message.author.username
+						});
+
+						outStr += theGroup.text.joinedWishGroup(userLang, theGroup);
+
+						if (theGroup.isFull()) {
+							let groupSize = theGroup.members.length;
+							let groupText = "";
+							for (let member of theGroup.members) {
+								groupText += member.name + ", ";
+							}
+							groupText = groupText.slice(0, -2);
+							outStr += theGroup.text.wishGroupFull(userLang, theGroup);
+							outStr += theGroup.text.wishGranted(userLang, theGroup);
+							// make the wish come true! (someday)
+							// theGroup.grantWish("seeds"); // maybe
+							delete v.wishingWell.groups[msgGuildId];
+						}
+					} else {
+						// no group, this player will now be a leader
+						let theGroup = new WishGroup({
+							"leaderId": who,
+							"message": message,
+							"userLang": userLang
+						});
+						v.wishingWell.groups[msgGuildId] = theGroup;
+						outStr += v.wishingWell.groups[msgGuildId].text.wishGroupCreated(userLang, theGroup);
+					}
+					utils.chSend(message, outStr);
+				}
+			},
+			loot: {
+				do: function(message, parms, gameStats, bankroll) {
+					let who = message.author.id;
+					let userLang = utils.getStat(who, "i18n", "language", gameStats);
+					utils.chSend(message, i18n.st(["lootFruit", "lootWish"], userLang));
+				}
+			},
+			time: {
+				do: function(message, parms, gameStats, bankroll) {
+					let who = message.author.id;
+					let userLang = utils.getStat(who, "i18n", "language", gameStats);
+					utils.chSend(message, i18n.st(["lootFruit", "timeWish"], userLang));
+				}
+			}
+		}
+	},
+	resetallcollects: {
+		help: "Reset the `!collect` timer for **ALL** users.",
+		longHelp: "Reset the `!collect` timer for **ALL** users so that they can collect immediately.",
+		access: [],
+		disabled: true,
+		do: function(message, args, gameStats) {
+			let totalResets = 0;
+			for (let userId in gameStats) {
+				utils.setStat(userId, "lastUsed", "collect", 0, gameStats);
+				totalResets++;
+			}
+			utils.chSend(message, `I've done my best to reset collect timers on ${totalResets} accounts.`);
 		}
 	},
 	collectbag: {
@@ -528,34 +827,65 @@ module.exports = {
 		  'loot to appear in your `!collect`ion bag. Yours will be ready in <<next>>'
 		},
 		do: function(message, parms, gameStats, bankroll) {
-			var who = message.author.id;	
+			let who = message.author.id;
+			let userLang = utils.getStat(who, "i18n", "language", gameStats);
+			let numTix = 1;
+			let messStr = "";
 			if (!utils.collectTimer(message, who, 'collect', this.timers, gameStats)) {
-				// not time yet. since we used collectTimer();, the rejection message
+				// not time yet. since we used collectTimer(), the rejection message
 				// is automatic, and we can just return; here if we want
 				return;
 			} else {
-				// if we're here, it's time to collect, and collectTime has been updated to now
-				var messStr =  ':moneybag: Loot bag `!collect`ed!  :moneybag:\n\n';
-				var collectVal = 12500;
-				var fruitBonus = 0;
-				
-				// Fruit bonus removed
-				/*
-				if (tree.trees.hasOwnProperty(who)) {
-					fruitBonus += 750 * tree.trees[who].length;
-					collectVal += fruitBonus;
-					messStr += ' :money_mouth: Bonus of ' + fruitBonus + ' for trying ' +
-					' the `!tree fruit` alpha-testing feature since last bot restart!\n';
-				}
-				*/
+				let baseVal = cons.ECONOMY.weeklyCollect.base;
+				let collectVal = 0;
+				let bonusRoles = cons.ECONOMY.weeklyCollect.bonus.role;
+				let totalBonus = 0;
+				let bonusStr = "";
 
-				var numTix = 1;
-				messStr += utils.makeTag(who) +  ', you have added ' + collectVal + ' credits ' + 
-				  'and ' + numTix + 'x :tickets: (raffle tickets) to your bank. \n';
-				 messStr += utils.makeTag(who) + ', you now have ' + utils.alterStat(who, 'raffle', 'ticketCount', numTix, gameStats) +
-				   ' :tickets: s and ' + utils.addBank(who, collectVal, bankroll) + ' credits! ';
+				let collectGuild = message.guild;
+				let collectServerId;
+				if (collectGuild) {
+					collectServerId = message.guild.id;
+				} else {
+					utils.chSend(message, i18n.st("weeklyCollectNoDM", userLang));
+					return;
+				}
+
+				if (collectServerId === cons.PLANET_SERVER_ID) {
+					for (let roleName in bonusRoles) {
+						let role = message.guild.roles.get(bonusRoles[roleName].id);
+						if (!role) {
+							console.log(`WARNING! Could not fetch role ${roleName}(${bonusRoles[roleName].id}) on The Planet!`);
+						} else {
+							if (role.members.get(who)) {
+								let bonusAmt = bonusRoles[roleName].bonusAmt;
+								totalBonus += bonusAmt;
+								bonusStr += i18n.st("weeklyCollectRoleBonusLine", userLang, [bonusAmt, roleName]);
+							}
+						}
+					}
+					if (totalBonus) {
+						messStr += i18n.st("weeklyCollectRoleBonusHeader", userLang)
+						messStr += bonusStr;
+						messStr += i18n.st("weeklyCollectRoleBonusFooter", userLang, [totalBonus]);
+					}
+				}
+				collectVal += baseVal;
+				collectVal += totalBonus;
+
+				messStr += i18n.st(
+					"weeklyCollect",
+					userLang,
+					[
+						utils.makeTag(who),
+						collectVal,
+						numTix,
+						utils.alterStat(who, 'raffle', 'ticketCount', numTix, gameStats),
+						utils.addBank(who, collectVal, bankroll)
+					]
+				);
 				//random saying extra bit on end (using tree sayings for now)
-				var sayings = JSON.stringify(tree.config.harvestMessages);
+				let sayings = JSON.stringify(tree.config.harvestMessages);
 				sayings = JSON.parse(sayings);
 				messStr += utils.listPick(sayings);
 				utils.chSend(message, messStr);
