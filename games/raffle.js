@@ -72,7 +72,7 @@ module.exports = {
 				let tix = entrants[entrantNum].tickets;
 				let endNum = currentNum + tix - 1;
 
-				let rangeStr = "\n#" + `${currentNum} - ${endNum}`.padStart(12, " ");
+				let rangeStr = "\n#" + `${currentNum + 1} - ${endNum + 1}`.padStart(12, " ");
 
 				str += "\n`" + rangeStr + "`";
 				str += `(:tickets: x ${tix}): **${nick}** (${who})`;
