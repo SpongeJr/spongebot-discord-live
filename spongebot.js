@@ -17,6 +17,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 IN THE SOFTWARE.
 */
+const os = require('os');
 const Discord = require('discord.js');
 const CONFIG = require('../config.json');
 const MYPALS = require('../mypals.json');
@@ -174,7 +175,7 @@ const Command = utils.Command;
 const commandList = {
 	"speak": { moduleName: "speech", disabled: true },
 	"btc": { moduleName: "mtcbtc", disabled: false },
-	"mtc": { moduleName: "mtcbtc" },
+	"mtc": { moduleName: "mtcbtc", disabled: true },
 	"bank": { moduleName: "collectibles" },
 	"buy": { moduleName: "collectibles", disabled: true },
 	"pointsrace": {moduleName: "khangames", disabled: false },
@@ -243,7 +244,8 @@ spongeBot.resetwishes = {
 	help: '(Temporary command) Resets your wish timer for debugging purposes',
 	do: function(message, parms) {
 		tree.resetwishes.do(message, parms, gameStats, bankroll);
-	}
+	},
+	accessRestrictions: []
 };
 spongeBot.rw = spongeBot.resetwishes; // alias
 spongeBot.collect = {
@@ -1264,6 +1266,60 @@ spongeBot.memory = {
 	longHelp: 'TODO'
 };
 //-----------------------------------------------------------------------------
+spongeBot.oslog = {
+	do: function(message, args) {
+		args = args.split(" ");
+		let osvar = args[0];
+
+		let validvars = {
+			"arch": "Underlying architecture",
+			"cpus": "CPU info",
+			"freemem": "Free memory",
+			"loadavg": "Load average",
+			"platform": "Platform",
+			"release": "OS release",
+			"totalmem": "Total available memory",
+			"uptime": "OS uptime",
+		}
+		if (validvars.hasOwnProperty(osvar)) {
+			if (typeof os[osvar] === "function") {
+				console.log(`REQUESTED OS VARIABLE OUTPUT: ${osvar}`)
+				console.log(os[osvar]());
+			}
+		} else {
+			console.log("oslog(): Could not output unknown OS variable.")
+		}
+	},
+	help: 'Admin command.',
+	longHelp: 'Admin command.'
+};
+//-----------------------------------------------------------------------------
+BOT.on('error', (info) => {
+	console.log(`##### ERROR! #####  ${new Date()}    Data follows:`);
+	// console.log(JSON.stringify(info)); // circular ref. crash
+});
+BOT.on('warn', (info) => {
+	console.log(`##### WARNING! #####  ${new Date()}    Data follows:`);
+// console.log(JSON.stringify(info)); // circular ref. crash
+});
+BOT.on('guildMemberAdd', (member) => {
+	console.log(
+		`${member.nickname}(${member.id}) joined guild ${member.guild}(${member.guild.id})`
+	);
+});
+BOT.on('rateLimit', (info) => {
+    console.log(`##### RATE LIMITED #####  ${new Date()}    Data follows:`);
+    console.log(JSON.stringify(info));
+	/*
+    info = JSON.stringify(info);
+
+	// get channel id from info.path and get a Channel object:
+    const channel = BOT.channels.get(info.split("/channels")[1].split("/")[1]);
+
+    //console.log(channel);
+    ut.messageQueue.setSlowMode(channel, info.timeDifference);
+	*/
+});
 BOT.on('ready', () => {
 
 	// do module inits:
@@ -1314,6 +1370,7 @@ BOT.on('raw', async event => {
 
 	BOT.emit(cons.EVENTS[event.t], reaction, user);
 });
+/*
 BOT.on('presenceUpdate', (oldMemb, newMemb) => {
 
 	if (newMemb.user.id === cons.MTCBOT_ID) {
@@ -1364,6 +1421,7 @@ BOT.on('presenceUpdate', (oldMemb, newMemb) => {
 
 	}
 });
+*/
 BOT.on('messageReactionAdd', (react, whoAdded) => {
 	console.log("-- messageReactionAdd event!");
 
