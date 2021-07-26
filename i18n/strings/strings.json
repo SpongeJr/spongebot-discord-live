@@ -70,6 +70,13 @@
 		}
 	},
 	"lootFruit": {
+		"alreadyInWishGroup": {
+			"en": [
+				"You are already in the wishing well group. ",
+				"There are **", 0, "** of **", 1, "** people gathered here.",
+				"\nTime remaining: **", 2, "** seconds"
+			]
+		},
 		"wishGroupCreated": {
 			"en": [
 				"You approach the magic wishing well.",
@@ -80,16 +87,16 @@
 		},
 		"joinedWishGroup": {
 			"en": [
-				"You have joined ", 0, "'s wishing well party. ",
-				"\nThere are now ", 1, " people in this party.",
-				"\nThe maximum party size is: ", 2,
-				"\nTime left in order for you to join the wishing party: **", 3, "** seconds"
+				"**", 0, "**, you have joined **", 1, "**'s wishing well party. ",
+				"\nThere are now **", 2, "** people in this party.",
+				"\nThe maximum party size is: **", 3, "**",
+				"\nTime left in order for you to join the wishing party: **", 4, "** seconds"
 			],
 			"es": [
-				"Te has unido al grupo del pozo de los deseos de ", 0,
-				"\nAhora hay ", 1, " personas en este grupo.",
-				"\nLa capacidad maxima del grupo es: ", 2,
-				"\nTiempo restante para unir del grupo del pozo de los deseos son: **", 3, "** segundos"
+				"**", 0, "**, te has unido al grupo del pozo de los deseos de ", 1,
+				"\nAhora hay **", 2, "** personas en este grupo.",
+				"\nLa capacidad maxima del grupo es: **", 3, "**",
+				"\nTiempo restante para unir del grupo del pozo de los deseos son: **", 4, "** segundos"
 			]
 		},
 		"wishGroupFull": {
@@ -104,17 +111,17 @@
 			]
 		},
 		"seedWishGranted": {
-			"en": [0, " gets a seed!\n"],
-			"es": ["¡", 0, " consigue una semilla!\n"]
+			"en": [0, " gets ", 1, " seed(s)! "],
+			"es": ["¡", 0, " consigue ", 1, " semilla(s)! "]
 		},
 		"lootWish": {
 			"en": [
-				"You sure wish you had more loot."
+				"You sure wish you had more loot. (Don't wish for this right now)"
 			]
 		},
 		"timeWish": {
 			"en": [
-				"We all wish we had more time."
+				"We all wish we had more time. (Don't wish for this right now)"
 			]
 		},
 		"wishTimeExpired": {
@@ -245,8 +252,12 @@
 			"es": ["La configuración se cambió correctamente a: ", 0]
 		},
 		"configChangeNotExist": {
-			"en": ["I see no scram config called `", 0, "` here!"],
-			"es": ["¡No veo ningún una configuración llamado `", 0, "` aquí!"]
+			"en": ["I see no scram config called `", 0, "` here!\n"],
+			"es": ["¡No veo ningún una configuración llamado `", 0, "` aquí!\n"]
+		},
+		"configList": {
+			"en": ["These are the valid configurations:\n"],
+			"es": ["Estas son las configuraciones válidas\n"]
 		},
 		"top10global": {
 			"en": [
@@ -278,6 +289,16 @@
 			"en": [
 				"FASTEST DESCRAMBLERS ON ", 0, ":\n",
 				"SUPERSONIC SCRAM CHAMP:  ->  ", 1, "  <-  in ", 2, " seconds!\n"
+			]
+		},
+		"top10monthly": {
+			"en": [
+				"THIS MONTH'S TOP 10 DESCRAMBLERS ON ", 0, ":\n",
+				"THIS MONTH'S !SCRAM MASTER:  ->  ", 1, " <-  with ", 2, " wins!\n"
+			],
+			"es": [
+				"LOS 10 MEJORES DESCIFRADORES DE ESTE MES EN ", 0, ":\n",
+				"!SCRAM MAESTRO DE ESTE MES:  ->  ", 1, " <-  con ", 2, " victorias!\n"
 			]
 		},
 		"cantGuessNow": {

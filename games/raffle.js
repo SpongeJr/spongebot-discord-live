@@ -89,6 +89,11 @@ module.exports = {
 		do: function(message, parms, gameStats) {
 
 			let who = message.author.id;
+			if (!gameStats[who]) {
+				str ="Let's get you set up with an account first. Do the `bank` command to do that.";
+				utils.chSend(message, str);
+				return;
+			}
 			let raffleStat = gameStats[who].raffle || {};
 			let now = new Date();
 			raffleStat.entered = raffleStat.entered || {};
@@ -147,6 +152,17 @@ module.exports = {
 				return;
 			}
 
+			// server checks
+			let server = message.guild;
+			if (!server) {
+				utils.chSend(message, "This command cannot be used in DM, sorry!");
+				return;
+			}
+			if (server.id !== cons.PLANET_SERVER_ID) {
+				utils.chSend(message, "I'm sorry, raffles are only intended for use on The Planet Discord right now.");
+				return;
+			}
+
 			raffleStat.ticketCount = raffleStat.ticketCount || 0;
 			let ticketsOwned = raffleStat.ticketCount;
 
@@ -167,8 +183,21 @@ module.exports = {
 
 			// if we're here, we have legitimate ticket number. check raffleId next.
 
+			if (!raffleId) {
+				utils.chSend(message, "You didn't enter a raffle ID! Check the list and try again. You need to enter the *exact* ID.");
+				return;
+			}
+
 			if (!raffleData.hasOwnProperty(raffleId)) {
-				utils.chSend(message, `${raffleId} That's not a valid Raffle ID. Check the list.`);
+				utils.chSend(message, `\`${raffleId}\` is not a valid Raffle ID. Check the list, and make sure to enter the id exactly.`);
+				return;
+			}
+
+			// check for trying to enter raffle in the past:
+			let raffleDate = new Date(raffleData[raffleId].date);
+			let now = new Date();
+			if (raffleDate < now) {
+				utils.chSend(message, `\`${raffleId}\` happened in the past, so you can not enter it.`);
 				return;
 			}
 
@@ -343,11 +372,15 @@ module.exports = {
 					parms = parms.split(' ');
 					who = utils.makeId(parms[0]);
 
+					/* this crashes, idek
+					
 					if (message.mentions.users.has(who)) {
 						// there's an @ mention, and it matches the id sent up
 						// so we can pass a user up to alterStat for nick nicking
 						who = message.mentions.users.find('id', who);
 					}
+					*/
+
 
 					if (parms[1] === '' || typeof parms[1] === 'undefined') {
 						amt = 1;

@@ -1,9 +1,12 @@
 {
+	"i18n": "./modules/i18n.js",
 	"enqueue": "./modules/enqueue.js",
 	"speech": "./modules/speech.js",
 	"mtcbtc": "./modules/mtcbtc.js",
 	"collectibles": "./modules/collectibles.js",
 	"nq": "./modules/enqueue.js",
 	"khangames": "./modules/khangames.js",
-	"youtube": "./modules/youtube.js"
+	"timey": "./modules/timey.js",
+	"youtube": "./modules/youtube.js",
+	"admin": "./modules/admin.js"
 }

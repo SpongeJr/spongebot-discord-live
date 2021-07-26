@@ -1,11 +1,13 @@
 const cons = require('../lib/constants.js');
 const utils = require('../lib/utils.js');
 const i18n = require('../modules/i18n.js');
+let savedObs = require('../' + cons.OBJECTS_FILENAME);
 
 let scram = {};
 let scramWordLists = {
 	"278588293321326594": cons.ESO_SCRAMWORDS,
-	"402126095056633859": cons.PLANET_SCRAMWORDS
+	"402126095056633859": cons.PLANET_SCRAMWORDS,
+	"687863497995976713": cons.SCRAMWORDS_NOKHAN
 };
 
 let scramConfigs = {
@@ -17,7 +19,8 @@ let scramConfigs = {
 		guessTime: 29000,
 		extraGuessTime: 2500,
 		maxMultiplier: 2,
-		minMultiplier: 1
+		minMultiplier: 1,
+		description: "Default Configuration (Standard timing, standard credits)"
 	},
 	"lightning": {
 		wordDelay: 1000,
@@ -27,7 +30,8 @@ let scramConfigs = {
 		guessTime: 29000,
 		extraGuessTime: 2500,
 		maxMultiplier: 2,
-		minMultiplier: 1
+		minMultiplier: 1,
+		description: "Lightning (Instant reset, no credits)"
 	},
 	"lightning-scored": {
 		wordDelay: 1000,
@@ -37,8 +41,36 @@ let scramConfigs = {
 		guessTime: 28200,
 		extraGuessTime: 2200,
 		maxMultiplier: 20,
-		minMultiplier: 1
+		minMultiplier: 1,
+		description: "Lightning scored (Instant reset, reduced credits)"
 	}
+};
+const getNextResetTime = function() {
+	/*
+	let now = new Date();
+	let monthlyReset = new Date();
+	let month = monthlyReset.getMonth();
+
+	// is it December? If so, increment year and reset month to 0 (Jan.)
+	if (month === 11) {
+		let year = monthlyReset.getFullYear();
+		year++;
+		monthlyReset.setYear(year);
+		month = 0;
+	} else {
+		// otherwise, just increment month
+		month++;
+	}
+	monthlyReset.setMonth(month);
+	monthlyReset.setDate(1);
+	monthlyReset.setHours(0);
+	monthlyReset.setMinutes(0);
+	monthlyReset.setSeconds(0);
+	monthlyReset.setMilliseconds(0);
+	let msUntilReset = monthlyReset.valueOf() - now.valueOf();
+	console.log(`-- scram.getNextResetTime(): Next monthly stat reset will be: ${monthlyReset.toString()}`);
+	return msUntilReset;
+	*/
 };
 //-----------------------------------------------------------------------------
 const scrambler = function(inputWord) {
@@ -54,6 +86,27 @@ const scrambler = function(inputWord) {
 };
 //-----------------------------------------------------------------------------
 module.exports = {
+	getNextResetTime: getNextResetTime,
+	monthlyTimer: {},
+	resetMonthlyTimer: function(gameStats) {
+		
+		// eventually, we want to track just the players that have played scram this month
+		// instead of iterating over all of gamestats! for now though, that's what we do...
+		for (let who in gameStats) {
+			let monthlyStats = utils.getStat(who, 'scram', 'monthly', gameStats);
+			if (monthlyStats) {
+				console.log(`Resetting ${who}'s montly scram stat!'`);
+				// we don't use setStat() because it writes to disk every time
+				// utils.setStat(who, 'scram', 'monthly', {}, gameStats);
+				gameStats[who].scram.monthly = {};
+			}
+			utils.saveStats(cons.STATS_FILENAME, gameStats);
+		}
+		let nextTime = getNextResetTime();
+		//this.monthlyTimer = setTimeout(() => {this.resetMonthlyTimer(gameStats)}, nextTime);
+		console.log(` -- Just reset the scram monthly timer! Next is in ${nextTime} milliseconds!`);
+		
+	},
 	subCmd: {
 		loadconfig: {
 			do: function(message, parms, gameStats) {
@@ -67,8 +120,17 @@ module.exports = {
 					//outStr += ' Config successfully changed to: ' + parms[1];
 					outStr += i18n.st(["scram", "configChangeOk"], userLang, [parms[1]]);
 				} else {
-					//outStr += ` I see no scram config called ${parms[1]} here!`;
-					outStr += i18n.st(["scram", "configChangeNotExist"], userLang, [parms[1]]);
+					if (parms[1]) {
+						//outStr += ` I see no scram config called ${parms[1]} here!`;
+						outStr += i18n.st(["scram", "configChangeNotExist"], userLang, [parms[1]]);
+					}
+
+					//outStr += "These are the valid configurations:";
+					outStr += i18n.st(["scram", "configList"], userLang);
+
+					configs.forEach(function(config, ind) {
+						outStr += `\`${config}\`: ${scramConfigs[config].description}\n`;
+					});
 				}
 				utils.chSend(message, outStr);
 			}
@@ -78,6 +140,76 @@ module.exports = {
 				let server = message.guild;
 				let outStr = 'You find yourself unable to do that at this time. Strange.';
 				utils.chSend(message, outStr);
+			}
+		},
+		mreset: {
+			do: function(message, parms, gameStats) {
+				utils.chSend(message, "Doing it...");
+				this.resetMonthlyTimer(gameStats);
+				
+			}
+		},
+		monthtop: {
+			do: function(message, parms, gameStats) {
+				let who = message.author.id;
+				let userLang = utils.getStat(who, "i18n", "language", gameStats);
+				let scramStats = {};
+				let scramServerStats = {};
+				let monthlyStats = {};
+				let outStr = '';
+				let topWins = [];
+				let fastest = [];
+				let monthlyTopWins = [];
+				let thisServer = message.guild;
+
+				// build scramStats and scramServerStats from gameStats
+
+				let game = 'scram';
+				for (let who in gameStats) {
+					for (let stat in gameStats[who][game]) {
+						if (!scramStats.hasOwnProperty(stat)) {
+							scramStats[stat] = {};
+						}
+						if (stat === "monthly") {
+							// user has a monthly stat, add it to the monthlyStats
+							// ...but only if it's from this server
+
+							let monthlyStat = "wins";
+							if (gameStats[who][game][stat].hasOwnProperty(thisServer.id)) {
+								monthlyStats[monthlyStat] = monthlyStats[monthlyStat] || {};
+								monthlyStats[monthlyStat][who] = monthlyStats[monthlyStat][who] || {};
+
+								for (let monthlyStat in gameStats[who][game][stat][thisServer.id]) {
+									// Ex: monthlyStats[monthlyStat].12345678 = gameStats.12345678.scram.monthly.server123[monthlyStat]
+									monthlyStats[monthlyStat][who] = gameStats[who][game][stat][thisServer.id][monthlyStat];
+								}
+							}
+						}
+					}
+				}
+
+				// build array and sort
+				for (let who in monthlyStats.wins) {
+					monthlyTopWins.push( {"who": who, "wins": monthlyStats.wins[who]} );
+				}
+
+				monthlyTopWins.sort(utils.objSort("wins", -1));
+
+				// output top 10 for THIS SERVER for THIS MONTH
+				if (monthlyTopWins.length > 0) {
+					let monthlyTopNick = utils.idToNick(monthlyTopWins[0].who, gameStats);
+					outStr += "```";
+					outStr += i18n.st(["scram", "top10monthly"], userLang, [thisServer.name, monthlyTopNick, monthlyTopWins[0].wins]);
+					/* outStr += '```TOP 10 DESCRAMBLERS on ' + thisServer.name + ':\n';
+					outStr += ` !SCRAM MASTER:  ->  ${serverTopNick}  <-  with ${serverTopWins[0].wins} wins! \n`;
+					*/
+					for (let num = 1; (num < 10 && num < monthlyTopWins.length); num++) {
+						let nick = utils.idToNick(monthlyTopWins[num].who, gameStats);
+						outStr += ` #${num + 1}: (${monthlyTopWins[num].wins}) ... ${nick} \n`;
+					}
+					outStr += '```';
+					utils.chSend(message, outStr);
+				}
 			}
 		},
 		oldtop: {
@@ -135,6 +267,30 @@ module.exports = {
 				utils.chSend(message, outStr);
 			}
 		},
+		words: {
+			do: function(message, parms, gameStats) {
+				let thisServer = message.guild;
+				let outP = "";
+				outP += `These are the active !scram word lists for this server:\n`;
+				let wordList;
+
+				if (scramWordLists.hasOwnProperty(thisServer.id)) {
+					wordList = scramWordLists[thisServer.id];
+				} else {
+					wordList = cons.SCRAMWORDS;
+				}
+				let listWordCount;
+				let totalWordCount = 0;
+
+				for (let category in wordList) {
+					listWordCount = wordList[category].split(",").length;
+					totalWordCount += listWordCount;
+					outP += `Category \`${category}\` has ${listWordCount} words.\n`
+				}
+				outP += `\n  TOTAL: \`${totalWordCount}\` WORDS`;
+				utils.chSend(message, outP);
+			}
+		},
 		top: {
 			do: function(message, parms, gameStats) {
 				let who = message.author.id;
@@ -155,7 +311,7 @@ module.exports = {
 						if (!scramStats.hasOwnProperty(stat)) {
 							scramStats[stat] = {};
 						}
-						if (scramStats.hasOwnProperty(stat) && (scramStats[stat] !== "wins" && scramStats[stat] !== "fastest")) {
+						if (scramStats.hasOwnProperty(stat) && (scramStats[stat] !== "wins" && scramStats[stat] !== "fastest" && scramStats[stat] !== "monthly")) {
 							// per-server stat found -- "stat" is the server id in this case
 							if (!scramServerStats.hasOwnProperty(stat)) {
 								scramServerStats[stat] = {};
@@ -169,10 +325,13 @@ module.exports = {
 				}
 
 				// build arrays and sort
+				// why do we do this here? we never use it here, only oldtop!
+				/*
 				for (let who in scramStats.wins) {
 					topWins.push( {"who": who, "wins": scramStats.wins[who]} );
 					fastest.push( {"who": who, "speed": scramStats.fastest[who]} );
 				}
+				*/
 
 				// build per-server arrays and sort
 				for (let who in scramServerStats[thisServer.id]) {
@@ -282,10 +441,12 @@ module.exports = {
 				let now = new Date();
 				let speed = now - scram[server.id].guessStartTime;
 				let fastest = utils.getStat(who, 'scram', 'fastest', gameStats) || 0;
-				let serverStats = utils.getStat(who, 'scram', server.id, gameStats) || {"wins": 0, "fastest": 0};
+				let serverStats = utils.getStat(who, 'scram', server.id, gameStats) || { "wins": 0, "fastest": 0 };
+				let monthlyStats = utils.getStat(who, 'scram', 'monthly', gameStats) || {};
+				let monthlyServerStats = monthlyStats[server.id] || { "wins": 0 };
+				let monthlyServerWins = monthlyServerStats.wins;
 				let serverFastest = serverStats.fastest;
 				let serverWins = serverStats.wins;
-
 
 				let guessTime = scramConfigs[scram[server.id].currentConfig].guessTime + scramConfigs[scram[server.id].currentConfig].extraGuessTime * theWord.length; // max allowed time
 				let multiplier = 1 - speed / guessTime;
@@ -331,6 +492,9 @@ module.exports = {
 				utils.alterStat(message.author.id, 'scram', 'wins', 1, gameStats); //global
 				serverStats.wins += 1;
 				utils.setStat(user, 'scram', server.id, serverStats, gameStats); // per-server
+				monthlyServerStats.wins += 1;
+				monthlyStats[server.id] = monthlyServerStats;
+				utils.setStat(user, 'scram', 'monthly', monthlyStats, gameStats); // monthly-per-server
 
 				if (gameStats[message.author.id].scram.wins % 25 === 0) {
 					outStr += `\n WOW, amazing! That makes ${gameStats[message.author.id].scram.wins} wins!`;
@@ -338,6 +502,7 @@ module.exports = {
 				outStr += '\n**' + user.username + '** has now unscrambled ' +
 				  gameStats[message.author.id].scram[server.id].wins + ' words! ' +
 				  '(' + gameStats[message.author.id].scram.wins + ' global wins)';
+				outStr += `\n And that makes ${monthlyServerStats.wins} wins for them this month!`;
 				}
 
 				let theDelay = Math.floor(Math.max(1, scramConfigs[scram[server.id].currentConfig].wordDelay - (scramConfigs[scram[server.id].currentConfig].wordDelayVariation / 2) +

@@ -1,17 +1,19 @@
 const utils = require('../lib/utils.js');
 const cons = require('../lib/constants.js');
 var saved = require('../' + cons.OBJECTS_FILENAME);
+let serverSymbolsFile = require('../' + cons.DATA_DIR + cons.SLOTS_SYMBOL_FILENAME);
 //-----------------------------------------------------------------------------
-var slots = {
+let slots = {
 	config: {
+		customSymbols: serverSymbolsFile,
 		symbols: {
-			rare: {emo: ':btc:', rarity: 1},
+			rare: {emo: ':muscle:', rarity: 1},
 			peng: {emo: ':penguin:', rarity: 4},
 			dolr: {emo: ':dollar:', rarity: 5},
 			sevn: {emo: ':seven:', rarity: 6},
 			mush: {emo: ':mushroom:', rarity: 9},
 			cher: {emo: ':cherries:', rarity: 12},
-			tato: {emo: ':tangerine:', rarity: 11},
+			tato: {emo: ':tangerine:', rarity: 11}
 		},
 		payTable: [
 			{payout: 3200, pattern: ['rare', 'rare', 'rare']},
@@ -46,6 +48,38 @@ module.exports = {
 		}
 	},
 	subCmd: {
+		topsymbol: {
+			do: function(message, parms, gameStats, bankroll, sl) {
+				// check and see if they're server owner
+				// if so let them set the top slot symbols
+				let who = message.author.id;
+				let server = message.guild;
+				if (!server) {
+					utils.chSend(message, "This command cannot be used in DM. Use it in a channel on a server.");
+					return;
+				}
+				let serverID = message.guild.id;
+				let serverName = server.name;
+				let ownerID = server.ownerID;
+
+				if (who !== ownerID) {
+					utils.chSend(message, `Only the owner of **${serverName}** can configure the top symbol of the slots machines.`);
+					return;
+				}
+
+				let newSym = parms;
+				// slots.config.symbols.rare.emo = newSym; // changes it globally, remove this
+
+				if (!slots.config.customSymbols[serverID]) {
+					slots.config.customSymbols[serverID] = {};
+				}
+
+				slots.config.customSymbols[serverID].rare = newSym;
+				utils.chSend(message, `Okay! The top symbol on **${serverName}**'s slot machines is now ${newSym}`);
+				sl.buildArray();
+				utils.saveObj(slots.config.customSymbols, cons.SLOTS_SYMBOL_FILENAME);
+			}
+		},
 		audit: {
 			do: function(message, parms) {
 				let sData = saved.slots;
@@ -58,7 +92,7 @@ module.exports = {
 				outStr += diff + ' (' + perc.toFixed(3) + '%)\n';
 				outStr += 'NUMBER OF SPINS: ' + sData.spins;
 				outStr += '\n\n Data collected since: ' + new Date(sData.dataStartDate);
-				
+
 				utils.chSend(message, '```Official Slot Machine Audit\n' + new Date() +
 				  '\n' + outStr + '```');
 			}
@@ -93,7 +127,7 @@ module.exports = {
 		symbol: {
 			access: [],
 			do: function(message, parms, gameStats, bankroll, sl) {
-				
+
 				// temporary access check, will use slots.subCmd.symbol.access[] later
 				if (!utils.hasAccess(message.author.id)) {
 					utils.chSend(message, 'Please step away from those machines!');
@@ -105,34 +139,38 @@ module.exports = {
 				if (!oldSym || !newSym) {
 					utils.chSend(message, ' Try again.');
 				} else {
-					
+
 					if (!slots.config.symbols.hasOwnProperty(oldSym)) {
 						utils.chSend('That\'s not valid. Probably because the ' +
 						' command doesn\'t yet do exactly what it is supposed to do.');
 					} else {
 						slots.config.symbols[oldSym].emo = newSym;
 					}
-					
+
 					sl.buildArray();
 					utils.debugPrint('.slots symbol: Rebuilt symbol array.');
-					utils.chSend(message, ' I changed ' + oldSym + ' to ' + newSym +
-					  ' on all the `!slots` machines for you.');
+					utils.chSend(message, `I changed ${oldSym} to ${newSym} as the default symbol on all the !slots machines for you`);
 				}
 			}
 		},
 		spin: {
 			access: false,
 			timedCmd: {
-				howOften: 900,
+				howOften: 1100,
 				gracePeriod: 0,
 				failResponse: '  :warning:  Please pull slots no faster than about ' +
 				  ' once per second per user.  :warning:'
 			},
 			do: function(message, parms, gameStats, bankroll) {
 				let author = message.author;
-				var payTab = slots.config.payTable;
-				var who = message.author.id;
-
+				let payTab = slots.config.payTable;
+				let who = message.author.id;
+				let server = message.guild;
+				if (!server) {
+					utils.chSend(message, "This command cannot be used in DM. Use it in a channel on a server.");
+					return;
+				}
+				let serverID = message.guild.id;
 				if (!utils.collectTimer(message, who, 'slots', this.timedCmd, gameStats)) {
 					return;
 				}
@@ -141,9 +179,9 @@ module.exports = {
 					utils.chSend(message, author.username + ', please open a `!bank` account before playing slots.');
 					return;
 				}
-				
+
 				parms = parms.split(' ');
-				
+
 				var betAmt = parseInt(parms[0]) || 0;
 
 				if (betAmt === 0) {
@@ -158,24 +196,24 @@ module.exports = {
 				} else if (betAmt === bankroll[who].credits) {
 					utils.chSend(message, author.username + ' just bet the farm on `!slots`!');
 				}
-				
+
 				utils.addBank(who, -betAmt, bankroll);
 				utils.alterStat(who, 'slots', 'credsIn', betAmt, gameStats, 'nosave'); // get it on the next one
 				utils.alterStat(who, 'slots', 'spins', 1, gameStats);
 				saved.slots.credsIn += betAmt;
 				saved.slots.spins++;
-				var spinArr = [];
+				let spinArr = [];
 				for (let reel = 0; reel < 3; reel++) {
-					
+
 					let bucket = [];
 					let highest = 0;
-					let buckNum = 0;					
-					for (var sym in slots.config.symbols) {
+					let buckNum = 0;
+					for (let sym in slots.config.symbols) {
 						bucket[buckNum] = highest + slots.config.symbols[sym].rarity;
 						buckNum++;
 						highest += slots.config.symbols[sym].rarity;
 					}
-					
+
 					let theSpin = Math.random() * highest;
 					let foundBuck = false;
 					let bNum = 0;
@@ -186,36 +224,45 @@ module.exports = {
 					}
 					spinArr.push(slots.config.symArr[bNum].sym);
 				}
-				
+
 				let spinString = '';
+				let customEmoji = slots.config.customSymbols[serverID];
 				for (let i = 0; i < 3; i++) {
-					spinString += slots.config.symbols[spinArr[i]].emo;
+					let theSymbol = "";
+					// theSymbol = (customEmoji && customEmoji[spinArr[i]]) ? customEmoji[spinArr[i]] : slots.config.symbols[spinArr[i]].emo;
+					if (customEmoji && customEmoji[spinArr[i]]) {
+						// we have a custom emoji for this server and symbol, use it
+						theSymbol = customEmoji[spinArr[i]];
+					} else {
+						theSymbol = slots.config.symbols[spinArr[i]].emo;
+					}
+					spinString += theSymbol;
 				}
 				spinString += ' (spun by ' + author.username + ')';
-				
+
 				for (let pNum = 0, won = false; ((pNum < payTab.length) && (!won)); pNum++) {
-					
+
 					let matched = true;
 					let reel = 0;
 					while (matched && reel < payTab[pNum].pattern.length) {
 						if ((spinArr[reel] === payTab[pNum].pattern[reel]) ||
 						  (payTab[pNum].pattern[reel] == 'any')) {
-							
+
 						} else {
 							matched = false;
-						}					
-						
+						}
+
 						if ((reel === payTab[pNum].pattern.length - 1) && (matched)) {
 							// winner winner chicken dinner
 							let winAmt = betAmt * payTab[pNum].payout;
 							spinString += '\n :slot_machine: ' +
-							  message.author.username + ' is a `!slots` winner!\n' + 
+							  message.author.username + ' is a `!slots` winner!\n' +
 							  ' PAYING OUT: ' + payTab[pNum].payout + ':1' +
 							  ' on a ' + betAmt + ' bet.   Payout =  ' + winAmt;
 							utils.addBank(who, winAmt, bankroll);
 							utils.alterStat(who, 'slots', 'credsOut', winAmt, gameStats);
 							saved.slots.credsOut += winAmt;
-							won = true;					
+							won = true;
 						}
 						reel++;
 					}
@@ -230,31 +277,47 @@ module.exports = {
 				let payTab = slots.config.payTable;
 				let rarityTot = 0;
 				let ptabString;
-				for (var sym in slots.config.symbols) {
+				let server = message.guild;
+				if (!server) {
+					utils.chSend(message, "This command cannot be used in DM. Use it in a channel on a server.");
+					return;
+				}
+				let serverID = message.guild.id;
+				let customEmoji = slots.config.customSymbols[serverID];
+				for (let sym in slots.config.symbols) {
 					rarityTot += slots.config.symbols[sym].rarity;
 				}
 
 				ptabString = '(Using config: ' + slots.config.configName + ')\n\n';
 				ptabString += '!SLOTS PAYOUT TABLE\n`[PAYOUT]    | [PATTERN]   | [ODDS AGAINST]`\n';
-				
-				for (var i = 0; i < payTab.length; i++) {
-					let lineChance = 1;	
+
+				for (let i = 0; i < payTab.length; i++) {
+					let lineChance = 1;
 					ptabString += '`' + payTab[i].payout + ' : 1';
-					
+
 					let tempstr = payTab[i].payout.toString() + ' : 1';
 					let stlen = tempstr.length;
 					for (let j = 0; j < 12 - stlen; j++) {
 						ptabString += ' ';
 					}
 					ptabString += '|` ';
-					
+
 					for (let j = 0; j < payTab[i].pattern.length; j++) {
 						if (payTab[i].pattern[j] === 'any') {
 							ptabString += ':grey_question: ';
 						} else {
-							ptabString += slots.config.symbols[payTab[i].pattern[j]].emo;
+							let theSymbol = "";
+							// theSymbol = (customEmoji && customEmoji[spinArr[i]]) ? customEmoji[spinArr[i]] : slots.config.symbols[spinArr[i]].emo;
+							if (customEmoji && customEmoji[payTab[i].pattern[j]]) {
+								// we have a custom emoji for this server and symbol, use it
+								theSymbol = customEmoji[payTab[i].pattern[j]];
+							} else {
+								theSymbol = slots.config.symbols[payTab[i].pattern[j]].emo;
+							}
+
+							ptabString += theSymbol;
 							ptabString += ' ';
-							lineChance = lineChance * (slots.config.symbols[payTab[i].pattern[j]].rarity / rarityTot);					
+							lineChance = lineChance * (slots.config.symbols[payTab[i].pattern[j]].rarity / rarityTot);
 						}
 					}
 					lineChance = 1 / lineChance;
@@ -271,7 +334,7 @@ module.exports = {
 			this.buildArray();
 			utils.debugPrint('.slots: First run, built symbol array.');
 		}
-		
+
 		// --- default command handler ---
 		parms = parms.split(' ');
 		if (parms[0] === '') {
@@ -280,7 +343,7 @@ module.exports = {
 		}
 		var sub = parms[0].toLowerCase(); // sub is the possible subcommand
 
-		
+
 		if (this.subCmd.hasOwnProperty(sub)) {
 			parms.shift(); // lop off the command that got us here
 			parms = parms.join(' ');

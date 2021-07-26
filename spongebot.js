@@ -22,6 +22,7 @@ const Discord = require('discord.js');
 const CONFIG = require('../config.json');
 const MYPALS = require('../mypals.json');
 const BOT = new Discord.Client();
+
 const SPONGEBOT_ID = 402122635552751616;
 const gbl = {}; // GLOBALS OBJECT
 
@@ -34,7 +35,7 @@ var debugPrint =function(inpString){
 			if ((inpString !== '') && (typeof inpString === 'string')) {
 				// todo: rate limiter?
 				if (inpString.length < 1024) {
-					BOT.channels.get(cons.DEBUGCHAN_ID).send(inpString);
+					BOT.channels.cache.get(cons.DEBUGCHAN_ID).send(inpString);
 				}
 			}
 		}
@@ -101,7 +102,7 @@ var sammichMaker = function() {
 };
 //-----------------------------------------------------------------------------
 var hasAccess = function(who, accessArr) {
-	return (who === cons.SPONGE_ID || who === cons.ARCH_ID);
+	return (who === cons.SPONGE_ID);
 };
 //-----------------------------------------------------------------------------
 var msToTime = function(inp) {
@@ -174,7 +175,7 @@ const Command = utils.Command;
 
 const commandList = {
 	"speak": { moduleName: "speech", disabled: true },
-	"btc": { moduleName: "mtcbtc", disabled: false },
+	"btc": { moduleName: "mtcbtc", disabled: true },
 	"mtc": { moduleName: "mtcbtc", disabled: true },
 	"bank": { moduleName: "collectibles" },
 	"buy": { moduleName: "collectibles", disabled: true },
@@ -183,7 +184,11 @@ const commandList = {
 	"tubesubs": { moduleName: "youtube" },
 	"addevent": { moduleName: "timey" },
 	"setevent": { moduleName: "timey" },
-	"setlang": { moduleName: "i18n" }
+	"setlang": { moduleName: "i18n" },
+	"setstatus": { moduleName: "admin", accessRestrictions: [] },
+	"enable": { moduleName: "admin", accessRestrictions: [] },
+	"disable": { moduleName: "admin", accessRestrictions: [] },
+	"restrict": { moduleName: "admin", accessRestrictions: [] },
 };
 
 for (let cmd in commandList) {
@@ -200,7 +205,6 @@ spongeBot.subscribe = new Command(
 );
 
 spongeBot.pr = spongeBot.pointsrace;
-
 
 /*
 const StoryCommand = function(name) {
@@ -406,6 +410,7 @@ spongeBot.rot13 = {
 	disabled: false
 };
 //-----------------------------------------------------------------------------
+/*
 spongeBot.enable = {
 	do: function(message, parms) {
 		if (!spongeBot[parms]) {
@@ -422,6 +427,8 @@ spongeBot.enable = {
 	help: 'Enables a bot command. Restricted access.',
 	accessRestrictions: true
 };
+*/
+/*
 spongeBot.disable = {
 	do: function(message, parms) {
 		if (!spongeBot[parms]) {
@@ -463,8 +470,8 @@ spongeBot.restrict = {
 		  spongeBot[parms].accessRestrictions);
 	},
 	help: ':warning: Toggles whether commands require special access.'
-
 };
+*/
 //-----------------------------------------------------------------------------
 spongeBot.server = {
 	cmdGroup: 'Miscellaneous',
@@ -513,6 +520,14 @@ spongeBot.sammich = {
 	help: '`!sammich` whips you up a tasty random sandwich (65% chance) or smoothie (35% chance)'
 };
 //-----------------------------------------------------------------------------
+spongeBot.mreset = {
+	cmdGroup: 'Fun and Games',
+	do: function(message, parms) {
+		scram.mreset.do(message, parms, gameStats, bankroll);
+	},
+	help: 'Month reset',
+	disabled: true
+};
 spongeBot.s = {
 	cmdGroup: 'Fun and Games',
 	do: function(message, parms) {
@@ -523,11 +538,26 @@ spongeBot.s = {
 	disabled: false
 };
 spongeBot.scram = {
+	getNextResetTime: scram.getNextResetTime,
+	monthlyTimer: scram.monthlyTimer,
+	resetMonthlyTimer: scram.resetMonthlyTimer,
+	init: function() {
+
+		/*
+		console.log(" -- scram.init(): Setting up timer...");
+		let nextReset = this.getNextResetTime();
+		console.log(` -- scram.init(): Next reset in ${nextReset} milliseconds!`);
+		this.monthlyTimer = setTimeout(() => {this.resetMonthlyTimer(gameStats)}, nextReset);
+		*/
+		console.log(" -- scram.init(): Skipping monthly reset stuff because it's buggy.");
+	},
 	subCmd: {},
 	do: function(message, parms) {
 		scram.do(message, parms, gameStats, bankroll);
 	},
-    help: '`!scram` starts the scramble game or checks to see if it\'s ready',
+    help: "`!scram` starts the word scramble game.\n" +
+	  "Use `!s <guess>` to guess the word once the game starts.\n" +
+	  "Use `!scram loadconfig` to load a new word scramble configuration.",
 	cmdGroup: 'Fun and Games',
 	disabled: false
 };
@@ -621,14 +651,13 @@ spongeBot.give = {
 			return;
 		}
 
-		if (bankroll[giver] < amt) {
-			utils.chSend(message, 'You can\'t give what you don\'t have, ' +
-			  utils.makeTag(giver) + '!');
+		if (!bankroll.hasOwnProperty("giver") && !bankroll[giver].hasOwnProperty("credits")) {
+			utils.chSend(message, `You'll need a bank account first, ${utils.makeTag(giver)}!`);
 			return;
 		}
 
-		if (!bankroll.hasOwnProperty(giver)) {
-			utils.chSend(message, 'You\'ll need a bank account first, ' +
+		if (bankroll[giver].credits < amt) {
+			utils.chSend(message, 'You can\'t give what you don\'t have, ' +
 			  utils.makeTag(giver) + '!');
 			return;
 		}
@@ -865,6 +894,7 @@ spongeBot.alterstat = {
 	disabled: true
 };
 spongeBot.stats = {
+	disabled: true,
 	cmdGroup: 'Fun and Games',
 	do: function(message, parms) {
 		var who;
@@ -909,7 +939,7 @@ spongeBot.stats = {
 	help: '`!stats <user>` shows game stats for <user>. Omit <user> for yourself.'
 };
 spongeBot.topstats = {
-	disabled: false,
+	disabled: true,
 	cmdGroup: 'Fun and Games',
 	do: function(message, parms) {
 		if (parms === '') {
@@ -958,7 +988,9 @@ spongeBot.slots = {
 	longHelp: ' Use `!slots spin <bet>` to put credits into the slot machine' +
 	  ' and give it a spin! You can also use `!slots paytable` to see the ' +
 	  ' current payout table, as well as `!slots stats` to see your stats. ' +
-	  ' You can use `!slots reset` if you want to reset your stats.'
+	  ' You can use `!slots reset` if you want to reset your stats.' +
+	  '\n\n :point_right: New feature for server owners! Use `!slots topsymbol <emoji>` to ' +
+	  'replace the top symbol of slot machines on your Discord to an emoji of your choice.'
 };
 //-----------------------------------------------------------------------------
 var buildHelp = function() {
@@ -1083,7 +1115,7 @@ spongeBot.say = {
 		} else {
 			chan = cons.MAINCHAN_ID;
 		}
-		BOT.channels.get(chan).send(parms);
+		BOT.channels.cache.get(chan).send(parms);
 	},
 	help: '`!say <stuff>` Make me speak. (limited access command)'
 };
@@ -1168,6 +1200,7 @@ spongeBot.a = {
 //-----------------------------------------------------------------------------
 spongeBot.who = {
 	cmdGroud: 'Admin',
+	disabled: true,
 	accessRestrictions: false,
 	do: function(message, parms) {
 		var memb;
@@ -1302,11 +1335,13 @@ BOT.on('warn', (info) => {
 	console.log(`##### WARNING! #####  ${new Date()}    Data follows:`);
 // console.log(JSON.stringify(info)); // circular ref. crash
 });
+/*
 BOT.on('guildMemberAdd', (member) => {
 	console.log(
 		`${member.nickname}(${member.id}) joined guild ${member.guild}(${member.guild.id})`
 	);
 });
+*/
 BOT.on('rateLimit', (info) => {
     console.log(`##### RATE LIMITED #####  ${new Date()}    Data follows:`);
     console.log(JSON.stringify(info));
@@ -1327,6 +1362,9 @@ BOT.on('ready', () => {
 	let moduleStr = "";
 	let timeStr = "";
 
+	debugPrint(" -- Handling scram.init() separately! Needs refactored to new patterns.");
+	spongeBot.scram.init();
+
 	for (let m in MODULES) {
 		moduleStr += m + "  ";
 		if (!MODULES[m].init) {
@@ -1345,37 +1383,57 @@ BOT.on('ready', () => {
 
 	BOT.user.setActivity('for !help & mitcoin changes', { type: 'WATCHING' });
 
-	if (Math.random() < 0.001) {BOT.channels.get(cons.SPAMCHAN_ID).send('I live!');}
+	if (Math.random() < 0.01) {BOT.channels.cache.get(cons.SPAMCHAN_ID).send('I live!');}
 });
 //-----------------------------------------------------------------------------
 
+/*
 BOT.on('raw', async event => {
 
 	if (!cons.EVENTS.hasOwnProperty(event.t)) return;
 
 	const { d: data } = event;
-	const user = BOT.users.get(data.user_id);
-	const channel = BOT.channels.get(data.channel_id) || await user.createDM();
+	const user = BOT.users.cache.get(data.user_id);
+	const channel = BOT.channels.cache.get(data.channel_id) || await user.createDM();
 
-	if (channel.messages.has(data.message_id)) return;
+	if (channel.messages.cache.has(data.message_id)) return;
 
 	const message = await channel.fetchMessage(data.message_id);
 	const emojiKey = (data.emoji.id) ? `${data.emoji.name}:${data.emoji.id}` : data.emoji.name;
 	let reaction = message.reactions.get(emojiKey);
 
 	if (!reaction) {
-		const emoji = new Discord.Emoji(BOT.guilds.get(data.guild_id), data.emoji);
+		const emoji = new Discord.Emoji(BOT.guilds.cache.get(data.guild_id), data.emoji);
 		reaction = new Discord.MessageReaction(message, emoji, 1, data.user_id === BOT.user.id);
 	}
 
 	BOT.emit(cons.EVENTS[event.t], reaction, user);
+
 });
+*/
 /*
-BOT.on('presenceUpdate', (oldMemb, newMemb) => {
+BOT.on('presenceUpdate', (oldPres, newPres) => {
+
+	console.log('*** I GOT A PRESENCE UPDATE ***');
+	/*
+	// console.log('OLD:');
+	// console.log(oldPres);
+	// console.log('NEW:');
+	//  console.log(newPres);
+
+
+	if (!newPres) {
+		console.log('newPres undefined on presenceUpdate!');
+		return;
+	}
+
+	let newMemb = newPres.member;
+	console.log(` *** (it was from ${newMemb})`);
 
 	if (newMemb.user.id === cons.MTCBOT_ID) {
-		let oldGame = oldMemb.presence.game;
-		let newGame = newMemb.presence.game;
+		console.log('*** ... and it was mtc bot!!! ***');
+		let oldGame = oldPres.game;
+		let newGame = newPres.game;
 
 		if (oldGame && newGame) {
 			if (oldGame.name && newGame.name && newMemb.guild.id === cons.MTCBOT_WATCH_SERVER) {
@@ -1418,17 +1476,16 @@ BOT.on('presenceUpdate', (oldMemb, newMemb) => {
 				}
 			}
 		}
-
 	}
 });
 */
 BOT.on('messageReactionAdd', (react, whoAdded) => {
-	console.log("-- messageReactionAdd event!");
+	// console.log("-- messageReactionAdd event!");
 
-	console.log(`-- react.emoji.identifier is: ${react.emoji.identifier}`);
+	// console.log(`-- react.emoji.identifier is: ${react.emoji.identifier}`);
 
 	if (react.emoji.identifier === cons.QUOTE_SAVE_EMO_UNI) {
-		console.log("-- reaction was a quote reaction");
+		console.log(" INFO: a quote save reaction was detected!");
 		//utils.chSend(react.message, 'I\'m sorry, I\'m afraid I can\'t do that for you.');
 		quotes.q.addByReact(react, whoAdded, BOT);
 	}
@@ -1441,10 +1498,17 @@ BOT.on('rateLimit', (info) => {
 
 BOT.on('message', message => {
 	if (message.content.startsWith('!')) {
-		var botCmd = message.content.slice(1); // retains the whole ! line, minus !
-		var theCmd = botCmd.split(' ')[0];
+		if (!gbl.client) {
+			gbl.client = BOT;
+		}
 
-		var parms = botCmd.replace(theCmd, ''); // remove the command itself, rest is parms
+		if (!gbl.spongeBot) {
+			gbl.spongeBot = spongeBot;
+		}
+		let botCmd = message.content.slice(1); // retains the whole ! line, minus !
+		let theCmd = botCmd.split(' ')[0];
+
+		let parms = botCmd.replace(theCmd, ''); // remove the command itself, rest is parms
 		theCmd = theCmd.toLowerCase();
 		if (!spongeBot.hasOwnProperty(theCmd)) {
 			// not a valid command
@@ -1468,7 +1532,7 @@ BOT.on('message', message => {
 							  ', ignoring limited-access command !' + theCmd);
 						} else {
 							// all good, run it
-							spongeBot[theCmd].do(message, parms, gameStats, gbl);
+							spongeBot[theCmd].do(message, parms, gameStats, bankroll, gbl);
 						}
 					}
 				} else {
@@ -1479,7 +1543,7 @@ BOT.on('message', message => {
 							debugPrint('!!! WARNING:  BOT.on(): missing .do() on ' + theCmd +
 							  ', ignoring user command !' + theCmd);
 						} else {
-							spongeBot[theCmd].do(message, parms, gameStats, bankroll, BOT);
+							spongeBot[theCmd].do(message, parms, gameStats, bankroll, gbl);
 						}
 					}
 				}

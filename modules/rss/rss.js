@@ -70,7 +70,7 @@ const sitePoller = function(site, BOT) {
 			  //announceStr += `... and also ${overflow} other items not listed.`;
 		  }
 		  rssConfig.sites[site].channels.forEach((chanId) => {
-			BOT.channels.get(chanId).send(announceStr);
+			BOT.channels.cache.get(chanId).send(announceStr);
 		  });
 	  }
 	  feedStorage[site].last = latestFeed;
